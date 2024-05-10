@@ -1,0 +1,73 @@
+apiVersion: skaffold/v2beta25
+kind: Config
+build:
+  artifacts:
+    - image: api
+      custom:
+        buildCommand: |
+          DOCKER_BUILDKIT=1 docker build --tag $IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 "$BUILD_CONTEXT"
+        dependencies:
+          dockerfile:
+            path: Dockerfile
+deploy:
+  helm:
+    hooks:
+      before:
+        - host:
+            command:
+              - sh
+              - -c
+              - helm repo add bitnami https://charts.bitnami.com/bitnami && helm repo add tnlcommunity https://raw.githubusercontent.com/tnlcommunity/charts/main && helm repo add catalystsquad https://raw.githubusercontent.com/catalystsquad/charts/main && helm repo add catalystcommunity https://raw.githubusercontent.com/catalystcommunity/charts/main
+    releases:
+      - name: api
+        namespace: api
+        createNamespace: true
+        chartPath: ./helm_chart
+        # remoteChart: forgeutah/taikai
+        artifactOverrides:
+          image: api
+        imageStrategy:
+          helm: {}
+        valuesFiles:
+          - skaffold-values.yaml
+        recreatePods: true
+        wait: true
+portForward:
+  # pf for grpc server
+  - resourceType: service
+    resourceName: api-taikai
+    namespace: api
+    port: 6000
+    localPort: 6000
+  # pf for grpc gateway
+  - resourceType: service
+    resourceName: api-taikai
+    namespace: api
+    port: 6001
+    localPort: 6001
+
+  # pf for postgres
+  - resourceType: service
+    resourceName: api-postgresql
+    namespace: api
+    port: 5432
+    localPort: 5432
+
+profiles:
+  - name: actions
+    activation:
+      - env: SKAFFOLD_ACTIONS=true
+    build:
+      artifacts:
+        - image: api
+          custom:
+            buildCommand: |
+              docker buildx build --tag $IMAGE --load --cache-from type=gha,mode=max --cache-to type=gha,mode=max --build-arg BUILDKIT_INLINE_CACHE=1 "$BUILD_CONTEXT"
+            dependencies:
+              dockerfile:
+                path: Dockerfile
+  - name: test
+    patches:
+      - op: replace
+        path: /deploy/helm/releases/0/namespace
+        value: test

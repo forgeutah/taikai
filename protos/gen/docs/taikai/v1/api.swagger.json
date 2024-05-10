@@ -1,0 +1,607 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "taikai/v1/api.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "Api"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/healthy": {
+      "get": {
+        "summary": "Health check",
+        "operationId": "Api_Healthy",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Empty"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Api"
+        ]
+      }
+    },
+    "/ready": {
+      "get": {
+        "summary": "Readiness check",
+        "operationId": "Api_Ready",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Empty"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Api"
+        ]
+      }
+    },
+    "/v1/hellos": {
+      "delete": {
+        "operationId": "Api_DeleteHellos",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          }
+        ],
+        "tags": [
+          "Api"
+        ]
+      },
+      "post": {
+        "operationId": "Api_UpsertHellos",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Hellos"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpsertHellosRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Api"
+        ]
+      }
+    },
+    "/v1/hellos/get": {
+      "post": {
+        "operationId": "Api_GetHellos",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Hellos"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          }
+        ],
+        "tags": [
+          "Api"
+        ]
+      }
+    },
+    "/v1/hellos/list": {
+      "get": {
+        "operationId": "Api_ListHellos",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Hellos"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "orderBy",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Api"
+        ]
+      }
+    },
+    "/v1/org": {
+      "delete": {
+        "operationId": "Api_DeleteOrg",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          }
+        ],
+        "tags": [
+          "Api"
+        ]
+      },
+      "post": {
+        "operationId": "Api_UpsertOrg",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Empty"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpsertOrgRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Api"
+        ]
+      }
+    },
+    "/v1/org/list": {
+      "get": {
+        "operationId": "Api_ListOrg",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListOrgResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "orgId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Api"
+        ]
+      }
+    },
+    "/v1/org/user": {
+      "post": {
+        "operationId": "Api_UpsertOrgUser",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Empty"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1UpsertOrgUserRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Api"
+        ]
+      }
+    },
+    "/v1/org/users": {
+      "get": {
+        "operationId": "Api_ListOrgUsers",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListOrgUsersResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Api"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1DeleteResponse": {
+      "type": "object",
+      "properties": {
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1Empty": {
+      "type": "object",
+      "title": "Do not delete these unless you know what you're doing"
+    },
+    "v1Hello": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "@gotags: fake:\"skip\""
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "@gotags: fake:\"skip\""
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "@gotags: fake:\"skip\""
+        },
+        "hello_type": {
+          "$ref": "#/definitions/v1HelloType",
+          "title": "@gotags: fake:\"{number:1,1}\""
+        },
+        "person_name": {
+          "type": "string",
+          "title": "@gotags: fake:\"{beername}\""
+        }
+      }
+    },
+    "v1HelloType": {
+      "type": "string",
+      "enum": [
+        "HELLO_GENERIC",
+        "HELLO_SPECIFIC"
+      ],
+      "default": "HELLO_GENERIC"
+    },
+    "v1Hellos": {
+      "type": "object",
+      "properties": {
+        "hellos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Hello"
+          }
+        }
+      },
+      "title": "Below here are the messages that aren't generic"
+    },
+    "v1ListOrgResponse": {
+      "type": "object",
+      "properties": {
+        "orgs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Org"
+          }
+        }
+      }
+    },
+    "v1ListOrgUsersResponse": {
+      "type": "object",
+      "properties": {
+        "users": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1User"
+          }
+        }
+      }
+    },
+    "v1Org": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "@gotags: fake:\"skip\""
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "@gotags: fake:\"skip\""
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "@gotags: fake:\"skip\""
+        },
+        "name": {
+          "type": "string",
+          "title": "@gotags: fake:\"{company}\""
+        },
+        "description": {
+          "type": "string",
+          "title": "@gotags: fake:\"{mission}\""
+        },
+        "owners": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1User"
+          },
+          "description": "this should be Ids because we are normalized :P",
+          "title": "@gotangs: fake:\"{clint}\""
+        }
+      }
+    },
+    "v1UpsertHellosRequest": {
+      "type": "object",
+      "properties": {
+        "hellos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Hello"
+          }
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1UpsertOrgRequest": {
+      "type": "object",
+      "properties": {
+        "org": {
+          "$ref": "#/definitions/v1Org"
+        }
+      }
+    },
+    "v1UpsertOrgUserRequest": {
+      "type": "object",
+      "properties": {
+        "orgId": {
+          "type": "string"
+        },
+        "user": {
+          "$ref": "#/definitions/v1User"
+        }
+      }
+    },
+    "v1User": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "@gotags: fake:\"skip\""
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "@gotags: fake:\"skip\""
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "title": "@gotags: fake:\"skip\""
+        },
+        "username": {
+          "type": "string",
+          "title": "@gotags: fake:\"{username}\""
+        },
+        "email": {
+          "type": "string",
+          "title": "@gotags: fake:\"{email}\""
+        },
+        "first_name": {
+          "type": "string",
+          "title": "@gotags: fake:\"{firstname}\""
+        },
+        "last_name": {
+          "type": "string",
+          "title": "@gotags: fake:\"{lastname}\""
+        },
+        "city": {
+          "type": "string",
+          "title": "@gotags: fake:\"{city}\""
+        },
+        "zip": {
+          "type": "string",
+          "title": "@gotags: fake:\"{zip}\""
+        },
+        "job_title": {
+          "type": "string",
+          "title": "@gotags: fake:\"{jobtitle}\""
+        }
+      }
+    }
+  }
+}

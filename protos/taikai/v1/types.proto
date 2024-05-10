@@ -1,0 +1,63 @@
+syntax = "proto3";
+package taikai.v1;
+
+import "options/gorm.proto";
+import "google/protobuf/timestamp.proto";
+import "taikai/v1/enums.proto";
+import "google/protobuf/struct.proto";
+
+option (gorm.file_opts) = {generate: true};
+
+message Hello {
+  option (gorm.opts) = {ormable: true};
+  // @gotags: fake:"skip"
+  string id = 1 [json_name = "id"];
+  // @gotags: fake:"skip"
+  google.protobuf.Timestamp created_at = 2 [json_name = "created_at"];
+  // @gotags: fake:"skip"
+  google.protobuf.Timestamp updated_at = 3 [json_name = "updated_at"];
+  // @gotags: fake:"{number:1,1}"
+  HelloType hello_type = 4 [json_name = "hello_type"];
+  // @gotags: fake:"{beername}"
+  optional string person_name = 5 [json_name = "person_name"];
+}
+
+message Org {
+	option (gorm.opts) = {ormable: true};
+	// @gotags: fake:"skip"
+	string id = 1 [json_name = "id"];
+	// @gotags: fake:"skip"
+	google.protobuf.Timestamp created_at = 2 [json_name = "created_at"];
+	// @gotags: fake:"skip"
+	google.protobuf.Timestamp updated_at = 3 [json_name = "updated_at"];
+	// @gotags: fake:"{company}"
+	string name = 4 [json_name = "name"];
+	// @gotags: fake:"{mission}"
+	optional string description = 5 [json_name = "description"];
+	// @gotangs: fake:"{clint}"
+	repeated User owners = 6 [json_name = "owners"]; // this should be Ids because we are normalized :P
+}
+
+message User {
+	option (gorm.opts) = {ormable: true};
+	// @gotags: fake:"skip"
+	optional string id = 1 [json_name = "id"];
+	// @gotags: fake:"skip"
+	google.protobuf.Timestamp created_at = 2 [json_name = "created_at"];
+	// @gotags: fake:"skip"
+	google.protobuf.Timestamp updated_at = 3 [json_name = "updated_at"];
+	// @gotags: fake:"{username}"
+	optional string username = 4 [json_name = "username"];
+	// @gotags: fake:"{email}"
+	optional string email = 5 [json_name = "email"];
+	// @gotags: fake:"{firstname}"
+	optional string first_name = 6 [json_name = "first_name"];
+	// @gotags: fake:"{lastname}"
+	optional string last_name = 7 [json_name = "last_name"];
+	// @gotags: fake:"{city}"
+	optional string city = 11 [json_name = "city"];
+	// @gotags: fake:"{zip}"
+	optional string zip = 13 [json_name = "zip"];
+	// @gotags: fake:"{jobtitle}"
+	optional string job_title = 17 [json_name = "job_title"];
+	}

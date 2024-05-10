@@ -1,0 +1,19 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: 4e70df4
+_src_path: https://github.com/catalystcommunity/copier-go-gorm-api
+codeowners_group: engineers
+create_codeowners: true
+create_settings: true
+create_workflows: true
+db_choice: Postgres
+enable_pull_request_test: true
+full_project_name: github.com/forgeutah/taikai
+githost: github
+github_private_access: false
+grpc_health_probe: true
+image_host: quay
+license_type: apache2
+organization: forgeutah
+release_method: None
+repo_description: github.com/forgeutah/taikai
+short_project_name: taikai

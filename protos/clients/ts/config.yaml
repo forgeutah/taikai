@@ -1,0 +1,6 @@
+additionalProperties:
+  npmName: '@taikai/client-ts'
+  npmVersion: 1.0.0
+  supportsES6: true
+  withNodeImports: true
+  withInterfaces: true

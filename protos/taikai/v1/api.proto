@@ -1,0 +1,69 @@
+syntax = "proto3";
+package taikai.v1;
+
+import "taikai/v1/requests.proto";
+import "google/api/annotations.proto";
+
+service Api {
+  rpc UpsertHellos(UpsertHellosRequest) returns (Hellos) {
+    option (google.api.http) = {
+      post: "/v1/hellos"
+      body:"*"
+    };
+  }
+  rpc DeleteHellos(DeleteRequest) returns (DeleteResponse) {
+    option (google.api.http) = {
+      delete: "/v1/hellos"
+    };
+  }
+  rpc ListHellos(ListRequest) returns (Hellos) {
+    option (google.api.http) = {
+      get: "/v1/hellos/list"
+    };
+  }
+  rpc GetHellos(GetRequest) returns (Hellos) {
+    option (google.api.http) = {
+      post: "/v1/hellos/get"
+    };
+  }
+  // Health check
+  rpc Healthy(Empty) returns (Empty) {
+    option (google.api.http) = {get: "/healthy"};
+  }
+  // Readiness check
+  rpc Ready(Empty) returns (Empty) {
+    option (google.api.http) = {get: "/ready"};
+  }
+
+	rpc UpsertOrg(UpsertOrgRequest) returns (Empty) {
+		option (google.api.http) = {
+			post: "/v1/org"
+			body:"*"
+		};
+	}
+
+	rpc ListOrg(ListOrgRequest) returns (ListOrgResponse) {
+		option (google.api.http) = {
+			get: "/v1/org/list"
+		};
+	}
+
+	rpc UpsertOrgUser(UpsertOrgUserRequest) returns (Empty) {
+		option (google.api.http) = {
+			post: "/v1/org/user"
+			body:"*"
+		};
+	}
+
+	rpc ListOrgUsers(ListOrgUsersRequest) returns (ListOrgUsersResponse) {
+		option (google.api.http) = {
+			get: "/v1/org/users"
+		};
+	}
+
+	rpc DeleteOrg(DeleteRequest) returns (DeleteResponse) {
+		option (google.api.http) = {
+			delete: "/v1/org"
+		};
+	}
+}
