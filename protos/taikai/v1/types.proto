@@ -1,15 +1,12 @@
 syntax = "proto3";
 package taikai.v1;
 
-import "options/gorm.proto";
 import "google/protobuf/timestamp.proto";
 import "taikai/v1/enums.proto";
 import "google/protobuf/struct.proto";
 
-option (gorm.file_opts) = {generate: true};
 
 message Hello {
-  option (gorm.opts) = {ormable: true};
   // @gotags: fake:"skip"
   string id = 1 [json_name = "id"];
   // @gotags: fake:"skip"
@@ -23,7 +20,6 @@ message Hello {
 }
 
 message Org {
-	option (gorm.opts) = {ormable: true};
 	// @gotags: fake:"skip"
 	string id = 1 [json_name = "id"];
 	// @gotags: fake:"skip"
@@ -39,7 +35,6 @@ message Org {
 }
 
 message User {
-	option (gorm.opts) = {ormable: true};
 	// @gotags: fake:"skip"
 	optional string id = 1 [json_name = "id"];
 	// @gotags: fake:"skip"

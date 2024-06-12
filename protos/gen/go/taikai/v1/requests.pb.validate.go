@@ -956,12 +956,33 @@ func (m *ListOrgRequest) validate(all bool) error {
 
 	var errors []error
 
-	if m.Name != nil {
+	switch v := m.Filter.(type) {
+	case *ListOrgRequest_Id:
+		if v == nil {
+			err := ListOrgRequestValidationError{
+				field:  "Filter",
+				reason: "oneof value cannot be a typed-nil",
+			}
+			if !all {
+				return err
+			}
+			errors = append(errors, err)
+		}
+		// no validation rules for Id
+	case *ListOrgRequest_Name:
+		if v == nil {
+			err := ListOrgRequestValidationError{
+				field:  "Filter",
+				reason: "oneof value cannot be a typed-nil",
+			}
+			if !all {
+				return err
+			}
+			errors = append(errors, err)
+		}
 		// no validation rules for Name
-	}
-
-	if m.OrgId != nil {
-		// no validation rules for OrgId
+	default:
+		_ = v // ensures v is used
 	}
 
 	if len(errors) > 0 {
@@ -1440,41 +1461,35 @@ func (m *UpsertOrgUserRequest) validate(all bool) error {
 
 	var errors []error
 
-	if m.OrgId != nil {
-		// no validation rules for OrgId
-	}
+	// no validation rules for OrgId
 
-	if m.User != nil {
-
-		if all {
-			switch v := interface{}(m.GetUser()).(type) {
-			case interface{ ValidateAll() error }:
-				if err := v.ValidateAll(); err != nil {
-					errors = append(errors, UpsertOrgUserRequestValidationError{
-						field:  "User",
-						reason: "embedded message failed validation",
-						cause:  err,
-					})
-				}
-			case interface{ Validate() error }:
-				if err := v.Validate(); err != nil {
-					errors = append(errors, UpsertOrgUserRequestValidationError{
-						field:  "User",
-						reason: "embedded message failed validation",
-						cause:  err,
-					})
-				}
-			}
-		} else if v, ok := interface{}(m.GetUser()).(interface{ Validate() error }); ok {
-			if err := v.Validate(); err != nil {
-				return UpsertOrgUserRequestValidationError{
+	if all {
+		switch v := interface{}(m.GetUser()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, UpsertOrgUserRequestValidationError{
 					field:  "User",
 					reason: "embedded message failed validation",
 					cause:  err,
-				}
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, UpsertOrgUserRequestValidationError{
+					field:  "User",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
 			}
 		}
-
+	} else if v, ok := interface{}(m.GetUser()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return UpsertOrgUserRequestValidationError{
+				field:  "User",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
 	}
 
 	if len(errors) > 0 {
@@ -1579,9 +1594,7 @@ func (m *DeleteOrgRequest) validate(all bool) error {
 
 	var errors []error
 
-	if m.Id != nil {
-		// no validation rules for Id
-	}
+	// no validation rules for Id
 
 	if len(errors) > 0 {
 		return DeleteOrgRequestMultiError(errors)

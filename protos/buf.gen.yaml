@@ -24,21 +24,15 @@ plugins:
       - paths=source_relative
       - generate_unbound_methods=true
   # protoc -> json marshalling
-  - plugin: buf.build/community/mitchellh-go-json
-    out: gen/go
-    opt:
-      - paths=source_relative
+  #  - plugin: buf.build/community/mitchellh-go-json
+  #  out: gen/go
+  #  opt:
+  #    - paths=source_relative
   # golang validators through annotations
-  - plugin: buf.build/bufbuild/validate-go
-    out: gen/go
-    opt:
-      - paths=source_relative
+  #- plugin: buf.build/bufbuild/validate-go
+  #  out: gen/go
+  #  opt:
+  #    - paths=source_relative
   # openapi spec
-  - plugin: buf.build/grpc-ecosystem/openapiv2
-    out: gen/docs
-  # db models and converters
-  - name: go-gorm
-    out: gen/go
-    opt:
-      - paths=source_relative
-      - engine=postgres
+  #- plugin: buf.build/grpc-ecosystem/openapiv2
+  #  out: gen/docs

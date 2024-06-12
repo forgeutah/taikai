@@ -19,3 +19,5 @@ func (a ApiServer) Ready(ctx context.Context, empty *taikaiv1.Empty) (*taikaiv1.
 	}
 	return nil, errors.New("")
 }
+
+func 

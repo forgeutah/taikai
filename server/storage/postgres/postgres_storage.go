@@ -1,82 +1,61 @@
 package postgres
 
 import (
-	"database/sql"
-	"log"
+	"context"
+	"embed"
+	"net/url"
 	"os"
 
-	"github.com/catalystsquad/app-utils-go/env"
 	"github.com/catalystsquad/app-utils-go/logging"
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	"github.com/pressly/goose/v3"
 )
 
-type PostgresStorage struct{}
+//go:embed migrations/*.sql
+var migrations embed.FS
 
-var uri = env.GetEnvOrDefault("POSTGRES_URI", "postgresql://postgres:postgres@localhost:5432?sslmode=disable")
-var gormLogLevel = env.GetEnvOrDefault("POSTGRES_LOG_LEVEL", "error")
-var ignoreRecordNotFoundError = env.GetEnvAsBoolOrDefault("POSTGRES_LOG_IGNORE_NOT_FOUND", "true")
-var parameterizedQueries = env.GetEnvAsBoolOrDefault("POSTGRES_LOG_PARAMETERIZED_QUERIES", "true")
-var slowQueryThreshold = env.GetEnvAsDurationOrDefault("POSTGRES_LOG_SLOW_QUERY_THRESHOLD", "1s")
-var maxIdleConns = env.GetEnvAsIntOrDefault("POSTGRES_MAX_IDLE_CONNS", "10")
-var maxOpenConns = env.GetEnvAsIntOrDefault("POSTGRES_MAX_OPEN_CONNS", "100")
-var connMaxLifetime = env.GetEnvAsDurationOrDefault("POSTGRES_CONN_MAX_LIFETIME", "1h")
-var connMaxIdleTime = env.GetEnvAsDurationOrDefault("POSTGRES_CONN_MAX_IDLE_TIME", "10m")
-var db *gorm.DB
-
-func (p PostgresStorage) Initialize() (shutdown func(), err error) {
-	config := &gorm.Config{
-		Logger: logger.New(
-			log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
-			logger.Config{
-				SlowThreshold:             slowQueryThreshold,
-				ParameterizedQueries:      parameterizedQueries,
-				LogLevel:                  getGormLogLevel(),         // Log level
-				IgnoreRecordNotFoundError: ignoreRecordNotFoundError, // Ignore ErrRecordNotFound error for logger
-				Colorful:                  true,                      // Disable color
-			},
-		),
-	}
-	if db, err = gorm.Open(postgres.Open(uri), config); err != nil {
-		return nil, err
-	}
-	var sqlDb *sql.DB
-	if sqlDb, err = db.DB(); err != nil {
-		return nil, err
-	}
-	sqlDb.SetMaxIdleConns(maxIdleConns)
-	sqlDb.SetMaxOpenConns(maxOpenConns)
-	sqlDb.SetConnMaxLifetime(connMaxLifetime)
-	sqlDb.SetConnMaxIdleTime(connMaxIdleTime)
-	logging.Log.Info("connected to postgres")
-	//err = db.AutoMigrate(&katanov1.AgentGormModel{})
-	//if err != nil {
-	//	panic(err)
-	//}
-	return nil, nil
+type PostgresStorage struct {
+	db *sqlx.DB
 }
 
-func getGormLogLevel() logger.LogLevel {
-	switch gormLogLevel {
-	case "silent":
-		return logger.Silent
-	case "error":
-		return logger.Error
-	case "warn":
-		return logger.Warn
-	case "info":
-		return logger.Info
-	default:
-		return logger.Error
-	}
-}
-
-func (p PostgresStorage) Ready() bool {
-	sqlDb, err := db.DB()
+func (p PostgresStorage) Initialize(ctx context.Context) (func(), error) {
+	// connect to forge cockroachdb serverless instances
+	err := loadCockroachRootCert(ctx)
 	if err != nil {
-		return false
+		return nil, err
 	}
-	return sqlDb.Ping() == nil
+
+	params := url.Values{}
+	params.Set("sslrootcert", fn)
+	params.Set("sslmode", "verify-full")
+
+	connectionString := url.URL{
+		Scheme:   "postgresql",
+		User:     url.UserPassword(os.Getenv("DB_USERNAME"), os.Getenv("DB_PASSWORD")),
+		Host:     os.Getenv("DB_HOST"),
+		Path:     os.Getenv("DB_NAME"),
+		RawQuery: params.Encode() + "&options=--cluster%3Dlanky-bird-5343", // options and clusert values need to remain un-encoded to connect:
+	}
+	logging.Log.Info("Connecting to postgres")
+	sqlDb, err := sqlx.Connect("postgres", connectionString.String())
+	if err != nil {
+		return nil, err
+	}
+
+	// set goose file system to use the embedded migrations
+	goose.SetBaseFS(migrations)
+	logging.Log.Info("Running migrations")
+	err = goose.Up(sqlDb.DB, "migrations")
+	if err != nil {
+		return nil, err
+	}
+	logging.Log.Info("connected to postgres")
+
+	// return a function to close the connection when the application is shutting down
+	return func() { sqlDb.Close() }, nil
+}
+
+func (p PostgresStorage) Ready(ctx context.Context) bool {
+	return p.db.Ping() == nil
 }

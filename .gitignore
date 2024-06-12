@@ -17,17 +17,21 @@ coverage
 /cypress/videos/
 /cypress/screenshots/
 
+
 # Editor directories and files
+cockroach-root.crt
+.secret
+
 .vscode/*
-!.vscode/extensions.json
-.idea
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+					.vscode/extensions.json
+					.idea
+				*.suo
+				*.ntvs*
+				*.njsproj
+				*.sln
+				*.sw?
 
-test-results/
-playwright-report/
+				test-results/
+				playwright-report/
 
-*.env
+				*.env

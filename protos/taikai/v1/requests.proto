@@ -36,8 +36,10 @@ message UpsertOrgRequest {
 }
 
 message ListOrgRequest {
-	optional string name = 1;
-	optional string orgId = 2; 
+	oneof filter {
+		string id = 1;
+		string name = 2;
+	}
 }
 
 message ListOrgResponse {
@@ -53,11 +55,11 @@ message ListOrgUsersResponse {
 }
 
 message UpsertOrgUserRequest {
-	optional string orgId = 1;
-	optional User user = 2;
+	string orgId = 1;
+	User user = 2;
 }
 
 
 message DeleteOrgRequest {
-	optional string id = 1;
+	string id = 1;
 }

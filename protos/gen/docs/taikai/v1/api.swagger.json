@@ -287,13 +287,13 @@
         },
         "parameters": [
           {
-            "name": "name",
+            "name": "id",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
-            "name": "orgId",
+            "name": "name",
             "in": "query",
             "required": false,
             "type": "string"

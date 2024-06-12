@@ -2,17 +2,17 @@ package storage
 
 import (
 	"context"
+
 	taikaiv1 "github.com/forgeutah/taikai/protos/gen/go/taikai/v1"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-var Storage StorageInterface
-
 type StorageInterface interface {
-	Initialize() (shutdown func(), err error)
-	Ready() bool
-	UpsertHellos(ctx context.Context, request *taikaiv1.UpsertHellosRequest) ([]*taikaiv1.Hello, error)
-	DeleteHellos(ctx context.Context, ids []string) error
-	ListHellos(ctx context.Context, request *taikaiv1.ListRequest) ([]*taikaiv1.Hello, error)
-	GetHellos(ctx context.Context, request *taikaiv1.GetRequest) ([]*taikaiv1.Hello, error)
-	GetHello(ctx context.Context, id string) (*taikaiv1.Hello, error)
+	Initialize(ctx context.Context) (shutdown func(), err error)
+	Ready(ctx context.Context) bool
+}
+
+type OrgEditor interface {
+	UpsertOrg(ctx context.Context, request *taikaiv1.UpsertOrgRequest) (*emptypb.Empty, error)
+	ListOrg(ctx context.Context, request *taikaiv1.ListOrgRequest) (*taikaiv1.ListOrgResponse, error)
 }
