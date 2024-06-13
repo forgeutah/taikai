@@ -63,3 +63,8 @@ message UpsertOrgUserRequest {
 message DeleteOrgRequest {
 	string id = 1;
 }
+
+message UpsertGroupRequest {
+	Group group = 1;
+}
+

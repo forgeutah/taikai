@@ -1,7 +1,7 @@
 -- +goose Up
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-create table if not exists org (
+create table if not exists orgs (
 	id                       uuid      default uuid_generate_v4() not null primary key,
 	created_at               timestamp default now(),
 	updated_at               timestamp default now(),
@@ -19,9 +19,9 @@ create table if not exists users (
 	zip                      text,
 	email                    text not null unique,
 	job_title                text,
-	org_id                   uuid references org(id)
+	org_id                   uuid references orgs(id)
 );
 
 -- +goose Down
 drop table if exists users;
-drop table if exists org;
+drop table if exists orgs;
