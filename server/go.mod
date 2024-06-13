@@ -6,6 +6,7 @@ require (
 	github.com/brianvoe/gofakeit/v6 v6.28.0
 	github.com/catalystsquad/app-utils-go v1.0.7
 	github.com/catalystsquad/grpc-base-go v1.0.5
+	github.com/davecgh/go-spew v1.1.1
 	github.com/emirpasic/gods v1.18.1
 	github.com/forgeutah/taikai/protos v0.0.0-00010101000000-000000000000
 	github.com/google/go-cmp v0.6.0
@@ -22,7 +23,6 @@ require (
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/getsentry/sentry-go v0.18.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
