@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	taikaiv1 "github.com/forgeutah/taikai/protos/gen/go/taikai/v1"
+	"github.com/google/uuid"
 )
 
 func (p *PostgresStorage) UpsertMeetupGroups(ctx context.Context, orgName string, groups []taikaiv1.Group) error {
@@ -25,12 +26,13 @@ func (p *PostgresStorage) UpsertMeetupGroups(ctx context.Context, orgName string
 	return nil
 }
 
-func (p *PostgresStorage) GetOrgID(ctx context.Context, orgName string) (string, error) {
-	var orgID string
-	query := `SELECT id FROM orgs WHERE org_name = $1`
-	err := p.db.QueryRowContext(ctx, query, orgName).Scan(&orgID)
+// GetGroupIDFromMeetup returns the group id for the given group name. this is a helper function for importing proMeetupGroups to Taikai
+func (p *PostgresStorage) GetGroupIDFromMeetup(ctx context.Context, groupMeetupID string) (uuid.UUID, error) {
+	var groupID uuid.UUID
+	query := `SELECT id FROM groups WHERE meetup_id = $1`
+	err := p.db.QueryRowContext(ctx, query, groupMeetupID).Scan(&groupID)
 	if err != nil {
-		return "", err
+		return uuid.UUID{}, err
 	}
-	return orgID, nil
+	return groupID, nil
 }

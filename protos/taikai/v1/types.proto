@@ -60,9 +60,9 @@ message User {
 	// @gotags: fake:"skip"
 	optional string meetup_id = 19 [json_name = "meetup_id"];
 	// @gotags: fake:"skip"
-	optional repeated string group_id = 20 [json_name = "group_id"];
+	repeated string group_id = 20 [json_name = "group_id"];
 	// @gotags: fake:"{state}"
-optional string state = 21 [json_name = "state"];
+	optional string state = 21 [json_name = "state"];
 	}
 
 message Group {

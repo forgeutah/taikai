@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/catalystsquad/app-utils-go/logging"
-	"github.com/davecgh/go-spew/spew"
 	taikaiv1 "github.com/forgeutah/taikai/protos/gen/go/taikai/v1"
 	pg "github.com/forgeutah/taikai/server/storage/postgres"
 )
@@ -100,7 +99,7 @@ func CreateOrg(ctx context.Context, db *pg.PostgresStorage, orgName string) erro
 	}
 	_, err := db.UpsertOrgs(ctx, req)
 	if err != nil {
-		return fmt.Errorf("failed to create meetup %v.", err)
+		return fmt.Errorf("failed to create meetup %w", err)
 	}
 	return nil
 }
@@ -109,14 +108,14 @@ func AddGroups(ctx context.Context, db *pg.PostgresStorage, filesDir, orgName st
 	// open csv file
 	f, err := os.Open(filesDir + "/meetup_groups.csv")
 	if err != nil {
-		return fmt.Errorf("failed to open file %v.", err)
+		return fmt.Errorf("failed to open file %w", err)
 	}
 
 	// parse csv file
 	csvReader := csv.NewReader(f)
 	records, err := csvReader.ReadAll()
 	if err != nil {
-		return fmt.Errorf("failed to read csv file %v.", err)
+		return fmt.Errorf("failed to read csv file %w", err)
 	}
 	var groups []taikaiv1.Group
 	for i, record := range records {
@@ -130,7 +129,7 @@ func AddGroups(ctx context.Context, db *pg.PostgresStorage, filesDir, orgName st
 	}
 	err = db.UpsertMeetupGroups(ctx, orgName, groups)
 	if err != nil {
-		return fmt.Errorf("failed to add groups to org: %s. %v", orgName, err)
+		return fmt.Errorf("failed to add groups to org: %s. %w", orgName, err)
 	}
 	return nil
 }
@@ -139,38 +138,43 @@ func AddUsers(ctx context.Context, db *pg.PostgresStorage, filesDir, orgName str
 	// open csv file
 	f, err := os.Open(filesDir + "/meetup_users.csv")
 	if err != nil {
-		return fmt.Errorf("failed to open file %v.", err)
+		return fmt.Errorf("failed to open file %w", err)
 	}
 
 	// parse csv file
 	csvReader := csv.NewReader(f)
 	records, err := csvReader.ReadAll()
 	if err != nil {
-		return fmt.Errorf("failed to read csv file %v.", err)
+		return fmt.Errorf("failed to read csv file %w", err)
 	}
 
 	// TODO: query db for org id
 
-	var users []taikaiv1.User
 	for i, record := range records {
 		if i == 0 {
 			continue
 		}
-		//meetup group ID GroupID:   &record[0],
-		//meetup group name GroupName: &record[1],
-		// TODO: get the org id from the db
-		// TODO: get the group id from the db
 
-		// TODO: split the name into first and last
+		groupUUID, err := db.GetGroupIDFromMeetup(ctx, record[0])
+		if err != nil {
+			return fmt.Errorf("failed to get group id %w", err)
+		}
+		log.Printf("groupName: %s, groupUUID: %s\n", record[1], groupUUID)
+
+		orgUUID, err := db.GetOrgID(ctx, orgName)
+		if err != nil {
+			return fmt.Errorf("failed to get org id %w", err)
+		}
 
 		// Column headers
 		// err = csvWriter.Write([]string{"group_id", "group_name", "member_id", "member_name", "member_email", "member_username", "state", "city", "zip", "isOrganizer"})
+
 		fullname := record[3]
 		splitName := strings.Split(fullname, " ")
 
 		isAdmin, _ := strconv.ParseBool(record[9])
 
-		users = append(users, taikaiv1.User{
+		user := taikaiv1.User{
 			FirstName: &splitName[0],
 			LastName:  &splitName[1],
 			Username:  &record[5],
@@ -179,15 +183,18 @@ func AddUsers(ctx context.Context, db *pg.PostgresStorage, filesDir, orgName str
 			City:      &record[7],
 			Zip:       &record[8],
 			MeetupId:  &record[2],
-			// OrgId:     "",
-			IsAdmin: isAdmin,
-		})
+			OrgId:     &orgUUID,
+		}
+		err = db.AddUser(ctx, &user, groupUUID)
+		if err != nil {
+			return fmt.Errorf("failed to add user %w", err)
+		}
+
+		if isAdmin {
+			log.Printf("user %s is an admin of group: %s", record[3], record[1])
+		}
 	}
 
-	spew.Dump(users)
-	// TODO: add db func to add users
-	// upsert if users does not exist add to the db
-	// if the user does exists validate email, username, and add relevant group
-	// check for matching on the meetup id
+	log.Printf("added %d users to db", len(records)-1)
 	return nil
 }

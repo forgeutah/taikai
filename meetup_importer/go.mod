@@ -4,12 +4,12 @@ go 1.22.0
 
 require (
 	github.com/catalystsquad/app-utils-go v1.0.8
-	github.com/davecgh/go-spew v1.1.1
 	github.com/forgeutah/taikai/protos v0.0.0-20240612235959-5045e9cd0437
 	github.com/forgeutah/taikai/server v0.0.0-20240612235959-5045e9cd0437
 )
 
 require (
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
 	github.com/jmoiron/sqlx v1.4.0 // indirect
 	github.com/lib/pq v1.10.9 // indirect
