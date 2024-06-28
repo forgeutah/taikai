@@ -19,7 +19,7 @@ type PostgresStorage struct {
 	db *sqlx.DB
 }
 
-func (p PostgresStorage) Initialize(ctx context.Context) (func(), error) {
+func (p *PostgresStorage) Initialize(ctx context.Context) (func(), error) {
 	// connect to forge cockroachdb serverless instances
 	err := loadCockroachRootCert(ctx)
 	if err != nil {
@@ -50,12 +50,13 @@ func (p PostgresStorage) Initialize(ctx context.Context) (func(), error) {
 	if err != nil {
 		return nil, err
 	}
+	p.db = sqlDb
 	logging.Log.Info("connected to postgres")
 
 	// return a function to close the connection when the application is shutting down
-	return func() { sqlDb.Close() }, nil
+	return func() { p.db.Close() }, nil
 }
 
-func (p PostgresStorage) Ready(ctx context.Context) bool {
+func (p *PostgresStorage) Ready(ctx context.Context) bool {
 	return p.db.Ping() == nil
 }

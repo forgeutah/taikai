@@ -328,6 +328,108 @@ func (x *User) GetJobTitle() string {
 	return ""
 }
 
+type Group struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// @gotags: fake:"skip"
+	Id *string `protobuf:"bytes,1,opt,name=id,proto3,oneof" json:"id,omitempty"`
+	// @gotags: fake:"skip"
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=created_at,proto3" json:"created_at,omitempty"`
+	// @gotags: fake:"skip"
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=updated_at,proto3" json:"updated_at,omitempty"`
+	// @gotags: fake:"{groupname}"
+	Name *string `protobuf:"bytes,4,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	// @gotags: fake:"{description}"
+	Description *string `protobuf:"bytes,5,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	// @gotags: fake:"skip"
+	OrgId *string `protobuf:"bytes,6,opt,name=org_id,proto3,oneof" json:"org_id,omitempty"`
+	// @gotags: fake:"skip"
+	MeetupId *string `protobuf:"bytes,7,opt,name=meetup_id,proto3,oneof" json:"meetup_id,omitempty"`
+}
+
+func (x *Group) Reset() {
+	*x = Group{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_taikai_v1_types_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Group) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Group) ProtoMessage() {}
+
+func (x *Group) ProtoReflect() protoreflect.Message {
+	mi := &file_taikai_v1_types_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Group.ProtoReflect.Descriptor instead.
+func (*Group) Descriptor() ([]byte, []int) {
+	return file_taikai_v1_types_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *Group) GetId() string {
+	if x != nil && x.Id != nil {
+		return *x.Id
+	}
+	return ""
+}
+
+func (x *Group) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Group) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *Group) GetName() string {
+	if x != nil && x.Name != nil {
+		return *x.Name
+	}
+	return ""
+}
+
+func (x *Group) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
+}
+
+func (x *Group) GetOrgId() string {
+	if x != nil && x.OrgId != nil {
+		return *x.OrgId
+	}
+	return ""
+}
+
+func (x *Group) GetMeetupId() string {
+	if x != nil && x.MeetupId != nil {
+		return *x.MeetupId
+	}
+	return ""
+}
+
 var File_taikai_v1_types_proto protoreflect.FileDescriptor
 
 var file_taikai_v1_types_proto_rawDesc = []byte{
@@ -399,7 +501,28 @@ var file_taikai_v1_types_proto_rawDesc = []byte{
 	0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x42, 0x0c, 0x0a, 0x0a, 0x5f, 0x6c, 0x61, 0x73, 0x74, 0x5f, 0x6e,
 	0x61, 0x6d, 0x65, 0x42, 0x07, 0x0a, 0x05, 0x5f, 0x63, 0x69, 0x74, 0x79, 0x42, 0x06, 0x0a, 0x04,
 	0x5f, 0x7a, 0x69, 0x70, 0x42, 0x0c, 0x0a, 0x0a, 0x5f, 0x6a, 0x6f, 0x62, 0x5f, 0x74, 0x69, 0x74,
-	0x6c, 0x65, 0x42, 0x9e, 0x01, 0x0a, 0x0d, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x61, 0x69, 0x6b, 0x61,
+	0x6c, 0x65, 0x22, 0xcd, 0x02, 0x0a, 0x05, 0x47, 0x72, 0x6f, 0x75, 0x70, 0x12, 0x13, 0x0a, 0x02,
+	0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x48, 0x00, 0x52, 0x02, 0x69, 0x64, 0x88, 0x01,
+	0x01, 0x12, 0x3a, 0x0a, 0x0a, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x5f, 0x61, 0x74, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d,
+	0x70, 0x52, 0x0a, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x5f, 0x61, 0x74, 0x12, 0x3a, 0x0a,
+	0x0a, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x5f, 0x61, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x0a, 0x75,
+	0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x5f, 0x61, 0x74, 0x12, 0x17, 0x0a, 0x04, 0x6e, 0x61, 0x6d,
+	0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x48, 0x01, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x88,
+	0x01, 0x01, 0x12, 0x25, 0x0a, 0x0b, 0x64, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f,
+	0x6e, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x48, 0x02, 0x52, 0x0b, 0x64, 0x65, 0x73, 0x63, 0x72,
+	0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x88, 0x01, 0x01, 0x12, 0x1b, 0x0a, 0x06, 0x6f, 0x72, 0x67,
+	0x5f, 0x69, 0x64, 0x18, 0x06, 0x20, 0x01, 0x28, 0x09, 0x48, 0x03, 0x52, 0x06, 0x6f, 0x72, 0x67,
+	0x5f, 0x69, 0x64, 0x88, 0x01, 0x01, 0x12, 0x21, 0x0a, 0x09, 0x6d, 0x65, 0x65, 0x74, 0x75, 0x70,
+	0x5f, 0x69, 0x64, 0x18, 0x07, 0x20, 0x01, 0x28, 0x09, 0x48, 0x04, 0x52, 0x09, 0x6d, 0x65, 0x65,
+	0x74, 0x75, 0x70, 0x5f, 0x69, 0x64, 0x88, 0x01, 0x01, 0x42, 0x05, 0x0a, 0x03, 0x5f, 0x69, 0x64,
+	0x42, 0x07, 0x0a, 0x05, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x42, 0x0e, 0x0a, 0x0c, 0x5f, 0x64, 0x65,
+	0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x42, 0x09, 0x0a, 0x07, 0x5f, 0x6f, 0x72,
+	0x67, 0x5f, 0x69, 0x64, 0x42, 0x0c, 0x0a, 0x0a, 0x5f, 0x6d, 0x65, 0x65, 0x74, 0x75, 0x70, 0x5f,
+	0x69, 0x64, 0x42, 0x9e, 0x01, 0x0a, 0x0d, 0x63, 0x6f, 0x6d, 0x2e, 0x74, 0x61, 0x69, 0x6b, 0x61,
 	0x69, 0x2e, 0x76, 0x31, 0x42, 0x0a, 0x54, 0x79, 0x70, 0x65, 0x73, 0x50, 0x72, 0x6f, 0x74, 0x6f,
 	0x50, 0x01, 0x5a, 0x3c, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x66,
 	0x6f, 0x72, 0x67, 0x65, 0x75, 0x74, 0x61, 0x68, 0x2f, 0x74, 0x61, 0x69, 0x6b, 0x61, 0x69, 0x2f,
@@ -424,28 +547,31 @@ func file_taikai_v1_types_proto_rawDescGZIP() []byte {
 	return file_taikai_v1_types_proto_rawDescData
 }
 
-var file_taikai_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_taikai_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_taikai_v1_types_proto_goTypes = []any{
 	(*Hello)(nil),                 // 0: taikai.v1.Hello
 	(*Org)(nil),                   // 1: taikai.v1.Org
 	(*User)(nil),                  // 2: taikai.v1.User
-	(*timestamppb.Timestamp)(nil), // 3: google.protobuf.Timestamp
-	(HelloType)(0),                // 4: taikai.v1.HelloType
+	(*Group)(nil),                 // 3: taikai.v1.Group
+	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
+	(HelloType)(0),                // 5: taikai.v1.HelloType
 }
 var file_taikai_v1_types_proto_depIdxs = []int32{
-	3, // 0: taikai.v1.Hello.created_at:type_name -> google.protobuf.Timestamp
-	3, // 1: taikai.v1.Hello.updated_at:type_name -> google.protobuf.Timestamp
-	4, // 2: taikai.v1.Hello.hello_type:type_name -> taikai.v1.HelloType
-	3, // 3: taikai.v1.Org.created_at:type_name -> google.protobuf.Timestamp
-	3, // 4: taikai.v1.Org.updated_at:type_name -> google.protobuf.Timestamp
-	2, // 5: taikai.v1.Org.owners:type_name -> taikai.v1.User
-	3, // 6: taikai.v1.User.created_at:type_name -> google.protobuf.Timestamp
-	3, // 7: taikai.v1.User.updated_at:type_name -> google.protobuf.Timestamp
-	8, // [8:8] is the sub-list for method output_type
-	8, // [8:8] is the sub-list for method input_type
-	8, // [8:8] is the sub-list for extension type_name
-	8, // [8:8] is the sub-list for extension extendee
-	0, // [0:8] is the sub-list for field type_name
+	4,  // 0: taikai.v1.Hello.created_at:type_name -> google.protobuf.Timestamp
+	4,  // 1: taikai.v1.Hello.updated_at:type_name -> google.protobuf.Timestamp
+	5,  // 2: taikai.v1.Hello.hello_type:type_name -> taikai.v1.HelloType
+	4,  // 3: taikai.v1.Org.created_at:type_name -> google.protobuf.Timestamp
+	4,  // 4: taikai.v1.Org.updated_at:type_name -> google.protobuf.Timestamp
+	2,  // 5: taikai.v1.Org.owners:type_name -> taikai.v1.User
+	4,  // 6: taikai.v1.User.created_at:type_name -> google.protobuf.Timestamp
+	4,  // 7: taikai.v1.User.updated_at:type_name -> google.protobuf.Timestamp
+	4,  // 8: taikai.v1.Group.created_at:type_name -> google.protobuf.Timestamp
+	4,  // 9: taikai.v1.Group.updated_at:type_name -> google.protobuf.Timestamp
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_taikai_v1_types_proto_init() }
@@ -491,17 +617,30 @@ func file_taikai_v1_types_proto_init() {
 				return nil
 			}
 		}
+		file_taikai_v1_types_proto_msgTypes[3].Exporter = func(v any, i int) any {
+			switch v := v.(*Group); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	file_taikai_v1_types_proto_msgTypes[0].OneofWrappers = []any{}
 	file_taikai_v1_types_proto_msgTypes[1].OneofWrappers = []any{}
 	file_taikai_v1_types_proto_msgTypes[2].OneofWrappers = []any{}
+	file_taikai_v1_types_proto_msgTypes[3].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_taikai_v1_types_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
