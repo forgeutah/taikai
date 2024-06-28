@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/catalystsquad/app-utils-go/logging"
@@ -67,29 +69,53 @@ func main() {
 		logging.Log.Error("storage not ready")
 	}
 
+	// create org
+	// err = CreateOrg(ctx, db, parsedConfig.ProAccount)
+	// if err != nil {
+	// 	logging.Log.WithError(err).Error("error creating org")
+	// }
+
+	// add groups
+	// err = AddGroups(ctx, db, filesDir, parsedConfig.ProAccount)
+	// if err != nil {
+	// 	logging.Log.WithError(err).Error("error adding groups")
+	// }
+
+	// add users
+	err = AddUsers(ctx, db, filesDir, parsedConfig.ProAccount)
+	if err != nil {
+		logging.Log.WithError(err).Error("error adding users")
+	}
+
+}
+
+func CreateOrg(ctx context.Context, db *pg.PostgresStorage, orgName string) error {
 	// create an upsert org request
 	// replace this with a grpc call
 	req := taikaiv1.UpsertOrgRequest{
 		Org: &taikaiv1.Org{
-			Name: parsedConfig.ProAccount,
+			Name: orgName,
 		},
 	}
-	_, err = db.UpsertOrgs(ctx, req)
+	_, err := db.UpsertOrgs(ctx, req)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to create meetup %w", err)
 	}
+	return nil
+}
 
+func AddGroups(ctx context.Context, db *pg.PostgresStorage, filesDir, orgName string) error {
 	// open csv file
 	f, err := os.Open(filesDir + "/meetup_groups.csv")
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to open file %w", err)
 	}
 
 	// parse csv file
 	csvReader := csv.NewReader(f)
 	records, err := csvReader.ReadAll()
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to read csv file %w", err)
 	}
 	var groups []taikaiv1.Group
 	for i, record := range records {
@@ -101,8 +127,74 @@ func main() {
 			MeetupId: &record[0],
 		})
 	}
-	err = db.UpsertMeetupGroups(ctx, parsedConfig.ProAccount, groups)
+	err = db.UpsertMeetupGroups(ctx, orgName, groups)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to add groups to org: %s. %w", orgName, err)
 	}
+	return nil
+}
+
+func AddUsers(ctx context.Context, db *pg.PostgresStorage, filesDir, orgName string) error {
+	// open csv file
+	f, err := os.Open(filesDir + "/meetup_users.csv")
+	if err != nil {
+		return fmt.Errorf("failed to open file %w", err)
+	}
+
+	// parse csv file
+	csvReader := csv.NewReader(f)
+	records, err := csvReader.ReadAll()
+	if err != nil {
+		return fmt.Errorf("failed to read csv file %w", err)
+	}
+
+	// TODO: query db for org id
+
+	for i, record := range records {
+		if i == 0 {
+			continue
+		}
+
+		groupUUID, err := db.GetGroupIDFromMeetup(ctx, record[0])
+		if err != nil {
+			return fmt.Errorf("failed to get group id %w", err)
+		}
+		log.Printf("groupName: %s, groupUUID: %s\n", record[1], groupUUID)
+
+		orgUUID, err := db.GetOrgID(ctx, orgName)
+		if err != nil {
+			return fmt.Errorf("failed to get org id %w", err)
+		}
+
+		// Column headers
+		// err = csvWriter.Write([]string{"group_id", "group_name", "member_id", "member_name", "member_email", "member_username", "state", "city", "zip", "isOrganizer"})
+
+		fullname := record[3]
+		splitName := strings.Split(fullname, " ")
+
+		isAdmin, _ := strconv.ParseBool(record[9])
+
+		user := taikaiv1.User{
+			FirstName: &splitName[0],
+			LastName:  &splitName[1],
+			Username:  &record[5],
+			Email:     &record[4],
+			State:     &record[6],
+			City:      &record[7],
+			Zip:       &record[8],
+			MeetupId:  &record[2],
+			OrgId:     &orgUUID,
+		}
+		err = db.AddUser(ctx, &user, groupUUID)
+		if err != nil {
+			return fmt.Errorf("failed to add user %w", err)
+		}
+
+		if isAdmin {
+			log.Printf("user %s is an admin of group: %s", record[3], record[1])
+		}
+	}
+
+	log.Printf("added %d users to db", len(records)-1)
+	return nil
 }

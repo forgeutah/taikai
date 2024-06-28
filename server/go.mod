@@ -9,6 +9,7 @@ require (
 	github.com/emirpasic/gods v1.18.1
 	github.com/forgeutah/taikai/protos v0.0.0-00010101000000-000000000000
 	github.com/google/go-cmp v0.6.0
+	github.com/google/uuid v1.6.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.10.9
 	github.com/pressly/goose/v3 v3.20.0

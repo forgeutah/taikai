@@ -7,6 +7,17 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+// GetOrgID returns the org id for the given org name. this is a helper function for importing proMeetupGroups to Taikai
+func (p *PostgresStorage) GetOrgID(ctx context.Context, orgName string) (string, error) {
+	var orgID string
+	query := `SELECT id FROM orgs WHERE org_name = $1`
+	err := p.db.QueryRowContext(ctx, query, orgName).Scan(&orgID)
+	if err != nil {
+		return "", err
+	}
+	return orgID, nil
+}
+
 func (p *PostgresStorage) UpsertOrgs(ctx context.Context, request taikaiv1.UpsertOrgRequest) (*emptypb.Empty, error) {
 	pb := taikaiv1.UpsertOrgRequest(request)
 	query := `INSERT INTO orgs (org_name)
