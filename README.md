@@ -22,6 +22,17 @@ In order to run this code you will need the following on your path:
 * Java of some kind (for the OpenAPI Client Generator)
 * bash, which you should just have anyway
 
+## Pull Requests
+
+We have three checks that must pass before a PR can be merged:
+
+* `go test ./...`
+* `buf check lint`
+* `golangci-lint run`
+* GitGuardian
+
+To run these checks locally, you can use the `./tools.sh`.
+
 # Running
 
 If using protos and the protos have not been built or are not up to date, you will be sad. `./tools.sh build_protos` will handle that.

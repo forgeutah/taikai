@@ -13,7 +13,7 @@ RUN go mod download
 # copy source code
 COPY server .
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o main main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o main main.go
 
 # Use distroless as minimal base image
 # Refer to https://github.com/GoogleContainerTools/distroless for more details

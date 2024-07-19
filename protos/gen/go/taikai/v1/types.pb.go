@@ -28,15 +28,15 @@ type Hello struct {
 	unknownFields protoimpl.UnknownFields
 
 	// @gotags: fake:"skip"
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty" fake:"skip"`
 	// @gotags: fake:"skip"
-	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=created_at,proto3" json:"created_at,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=created_at,proto3" json:"created_at,omitempty" fake:"skip"`
 	// @gotags: fake:"skip"
-	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=updated_at,proto3" json:"updated_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=updated_at,proto3" json:"updated_at,omitempty" fake:"skip"`
 	// @gotags: fake:"{number:1,1}"
-	HelloType HelloType `protobuf:"varint,4,opt,name=hello_type,proto3,enum=taikai.v1.HelloType" json:"hello_type,omitempty"`
+	HelloType HelloType `protobuf:"varint,4,opt,name=hello_type,proto3,enum=taikai.v1.HelloType" json:"hello_type,omitempty" fake:"{number:1,1}"`
 	// @gotags: fake:"{beername}"
-	PersonName *string `protobuf:"bytes,5,opt,name=person_name,proto3,oneof" json:"person_name,omitempty"`
+	PersonName *string `protobuf:"bytes,5,opt,name=person_name,proto3,oneof" json:"person_name,omitempty" fake:"{beername}"`
 }
 
 func (x *Hello) Reset() {
@@ -112,15 +112,15 @@ type Org struct {
 	unknownFields protoimpl.UnknownFields
 
 	// @gotags: fake:"skip"
-	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty" fake:"skip"`
 	// @gotags: fake:"skip"
-	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=created_at,proto3" json:"created_at,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=created_at,proto3" json:"created_at,omitempty" fake:"skip"`
 	// @gotags: fake:"skip"
-	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=updated_at,proto3" json:"updated_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=updated_at,proto3" json:"updated_at,omitempty" fake:"skip"`
 	// @gotags: fake:"{company}"
-	Name string `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	Name string `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty" fake:"{company}"`
 	// @gotags: fake:"{mission}"
-	Description *string `protobuf:"bytes,5,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	Description *string `protobuf:"bytes,5,opt,name=description,proto3,oneof" json:"description,omitempty" fake:"{mission}"`
 	// @gotangs: fake:"{clint}"
 	Owners []*User `protobuf:"bytes,6,rep,name=owners,proto3" json:"owners,omitempty"` // this should be Ids because we are normalized :P
 }
@@ -205,25 +205,25 @@ type User struct {
 	unknownFields protoimpl.UnknownFields
 
 	// @gotags: fake:"skip"
-	Id *string `protobuf:"bytes,1,opt,name=id,proto3,oneof" json:"id,omitempty"`
+	Id *string `protobuf:"bytes,1,opt,name=id,proto3,oneof" json:"id,omitempty" fake:"skip"`
 	// @gotags: fake:"skip"
-	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=created_at,proto3" json:"created_at,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=created_at,proto3" json:"created_at,omitempty" fake:"skip"`
 	// @gotags: fake:"skip"
-	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=updated_at,proto3" json:"updated_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=updated_at,proto3" json:"updated_at,omitempty" fake:"skip"`
 	// @gotags: fake:"{username}"
-	Username *string `protobuf:"bytes,4,opt,name=username,proto3,oneof" json:"username,omitempty"`
+	Username *string `protobuf:"bytes,4,opt,name=username,proto3,oneof" json:"username,omitempty" fake:"{username}"`
 	// @gotags: fake:"{email}"
-	Email *string `protobuf:"bytes,5,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	Email *string `protobuf:"bytes,5,opt,name=email,proto3,oneof" json:"email,omitempty" fake:"{email}"`
 	// @gotags: fake:"{firstname}"
-	FirstName *string `protobuf:"bytes,6,opt,name=first_name,proto3,oneof" json:"first_name,omitempty"`
+	FirstName *string `protobuf:"bytes,6,opt,name=first_name,proto3,oneof" json:"first_name,omitempty" fake:"{firstname}"`
 	// @gotags: fake:"{lastname}"
-	LastName *string `protobuf:"bytes,7,opt,name=last_name,proto3,oneof" json:"last_name,omitempty"`
+	LastName *string `protobuf:"bytes,7,opt,name=last_name,proto3,oneof" json:"last_name,omitempty" fake:"{lastname}"`
 	// @gotags: fake:"{city}"
-	City *string `protobuf:"bytes,11,opt,name=city,proto3,oneof" json:"city,omitempty"`
+	City *string `protobuf:"bytes,11,opt,name=city,proto3,oneof" json:"city,omitempty" fake:"{city}"`
 	// @gotags: fake:"{zip}"
-	Zip *string `protobuf:"bytes,13,opt,name=zip,proto3,oneof" json:"zip,omitempty"`
+	Zip *string `protobuf:"bytes,13,opt,name=zip,proto3,oneof" json:"zip,omitempty" fake:"{zip}"`
 	// @gotags: fake:"{jobtitle}"
-	JobTitle *string `protobuf:"bytes,17,opt,name=job_title,proto3,oneof" json:"job_title,omitempty"`
+	JobTitle *string `protobuf:"bytes,17,opt,name=job_title,proto3,oneof" json:"job_title,omitempty" fake:"{jobtitle}"`
 }
 
 func (x *User) Reset() {
@@ -334,19 +334,19 @@ type Group struct {
 	unknownFields protoimpl.UnknownFields
 
 	// @gotags: fake:"skip"
-	Id *string `protobuf:"bytes,1,opt,name=id,proto3,oneof" json:"id,omitempty"`
+	Id *string `protobuf:"bytes,1,opt,name=id,proto3,oneof" json:"id,omitempty" fake:"skip"`
 	// @gotags: fake:"skip"
-	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=created_at,proto3" json:"created_at,omitempty"`
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=created_at,proto3" json:"created_at,omitempty" fake:"skip"`
 	// @gotags: fake:"skip"
-	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=updated_at,proto3" json:"updated_at,omitempty"`
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=updated_at,proto3" json:"updated_at,omitempty" fake:"skip"`
 	// @gotags: fake:"{groupname}"
-	Name *string `protobuf:"bytes,4,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Name *string `protobuf:"bytes,4,opt,name=name,proto3,oneof" json:"name,omitempty" fake:"{groupname}"`
 	// @gotags: fake:"{description}"
-	Description *string `protobuf:"bytes,5,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	Description *string `protobuf:"bytes,5,opt,name=description,proto3,oneof" json:"description,omitempty" fake:"{description}"`
 	// @gotags: fake:"skip"
-	OrgId *string `protobuf:"bytes,6,opt,name=org_id,proto3,oneof" json:"org_id,omitempty"`
+	OrgId *string `protobuf:"bytes,6,opt,name=org_id,proto3,oneof" json:"org_id,omitempty" fake:"skip"`
 	// @gotags: fake:"skip"
-	MeetupId *string `protobuf:"bytes,7,opt,name=meetup_id,proto3,oneof" json:"meetup_id,omitempty"`
+	MeetupId *string `protobuf:"bytes,7,opt,name=meetup_id,proto3,oneof" json:"meetup_id,omitempty" fake:"skip"`
 }
 
 func (x *Group) Reset() {
