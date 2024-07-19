@@ -4,10 +4,13 @@ import (
 	"context"
 	"encoding/csv"
 	"encoding/json"
+	"expvar"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/catalystsquad/app-utils-go/logging"
@@ -15,7 +18,10 @@ import (
 	pg "github.com/forgeutah/taikai/server/storage/postgres"
 )
 
-// TODO: add users to db
+var (
+	countUsersWithNoEmail expvar.Int
+	countAdminUsers       expvar.Int
+)
 
 type Config struct {
 	Key         string `json:"kolla_key"`
@@ -52,6 +58,9 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// setup logging
+	expvar.Publish("countUsersWithNoEmail", &countUsersWithNoEmail)
+
 	// connect to db
 	db := &pg.PostgresStorage{}
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Minute)
@@ -67,29 +76,53 @@ func main() {
 		logging.Log.Error("storage not ready")
 	}
 
+	// create org
+	// err = CreateOrg(ctx, db, parsedConfig.ProAccount)
+	// if err != nil {
+	// 	logging.Log.WithError(err).Error("error creating org")
+	// }
+
+	// add groups
+	// err = AddGroups(ctx, db, filesDir, parsedConfig.ProAccount)
+	// if err != nil {
+	// 	logging.Log.WithError(err).Error("error adding groups")
+	// }
+
+	// add users
+	err = AddUsers(ctx, db, filesDir, parsedConfig.ProAccount)
+	if err != nil {
+		logging.Log.WithError(err).Error("error adding users")
+	}
+
+}
+
+func CreateOrg(ctx context.Context, db *pg.PostgresStorage, orgName string) error {
 	// create an upsert org request
 	// replace this with a grpc call
 	req := taikaiv1.UpsertOrgRequest{
 		Org: &taikaiv1.Org{
-			Name: parsedConfig.ProAccount,
+			Name: orgName,
 		},
 	}
-	_, err = db.UpsertOrgs(ctx, req)
+	_, err := db.UpsertOrgs(ctx, req)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to create meetup %w", err)
 	}
+	return nil
+}
 
+func AddGroups(ctx context.Context, db *pg.PostgresStorage, filesDir, orgName string) error {
 	// open csv file
 	f, err := os.Open(filesDir + "/meetup_groups.csv")
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to open file %w", err)
 	}
 
 	// parse csv file
 	csvReader := csv.NewReader(f)
 	records, err := csvReader.ReadAll()
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to read csv file %w", err)
 	}
 	var groups []taikaiv1.Group
 	for i, record := range records {
@@ -101,8 +134,79 @@ func main() {
 			MeetupId: &record[0],
 		})
 	}
-	err = db.UpsertMeetupGroups(ctx, parsedConfig.ProAccount, groups)
+	err = db.UpsertMeetupGroups(ctx, orgName, groups)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("failed to add groups to org: %s. %w", orgName, err)
 	}
+	return nil
+}
+
+func AddUsers(ctx context.Context, db *pg.PostgresStorage, filesDir, orgName string) error {
+	// open csv file
+	f, err := os.Open(filesDir + "/meetup_users.csv")
+	if err != nil {
+		return fmt.Errorf("failed to open file %w", err)
+	}
+
+	// parse csv file
+	csvReader := csv.NewReader(f)
+	records, err := csvReader.ReadAll()
+	if err != nil {
+		return fmt.Errorf("failed to read csv file %w", err)
+	}
+
+	// TODO: query db for org id
+
+	for i, record := range records {
+		if i == 0 {
+			continue
+		}
+
+		groupUUID, err := db.GetGroupIDFromMeetup(ctx, record[0])
+		if err != nil {
+			return fmt.Errorf("failed to get group id %w", err)
+		}
+
+		orgUUID, err := db.GetOrgID(ctx, orgName)
+		if err != nil {
+			return fmt.Errorf("failed to get org id %w", err)
+		}
+
+		// skip users without email since there is no way to contact them
+		if record[4] == "" {
+			countUsersWithNoEmail.Add(1)
+			continue
+		}
+
+		fullname := record[3]
+		splitName := strings.Split(fullname, " ")
+		firstName := splitName[0]
+		lastName := ""
+		if len(splitName) > 1 {
+			lastName = splitName[1]
+		}
+
+		isAdmin, _ := strconv.ParseBool(record[9])
+
+		user := taikaiv1.User{
+			FirstName: &firstName,
+			LastName:  &lastName,
+			Username:  &record[5],
+			Email:     &record[4],
+			State:     &record[6],
+			City:      &record[7],
+			Zip:       &record[8],
+			MeetupId:  &record[2],
+			OrgId:     &orgUUID,
+		}
+		err = db.AddUser(ctx, &user, groupUUID)
+		if err != nil {
+			return fmt.Errorf("failed to add user %w", err)
+		}
+
+		if isAdmin {
+			countAdminUsers.Add(1)
+		}
+	}
+	return nil
 }

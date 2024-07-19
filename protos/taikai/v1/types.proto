@@ -55,6 +55,14 @@ message User {
 	optional string zip = 13 [json_name = "zip"];
 	// @gotags: fake:"{jobtitle}"
 	optional string job_title = 17 [json_name = "job_title"];
+	// @gotags: fake:"skip"
+	optional string org_id = 18 [json_name = "org_id"];
+	// @gotags: fake:"skip"
+	optional string meetup_id = 19 [json_name = "meetup_id"];
+	// @gotags: fake:"skip"
+	repeated string group_id = 20 [json_name = "group_id"];
+	// @gotags: fake:"{state}"
+	optional string state = 21 [json_name = "state"];
 	}
 
 message Group {
@@ -73,3 +81,4 @@ message Group {
 	// @gotags: fake:"skip"
 	optional string meetup_id = 7 [json_name = "meetup_id"];
 	}
+
