@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/csv"
 	"encoding/json"
+	"expvar"
 	"flag"
 	"fmt"
 	"log"
@@ -17,7 +18,10 @@ import (
 	pg "github.com/forgeutah/taikai/server/storage/postgres"
 )
 
-// TODO: add users to db
+var (
+	countUsersWithNoEmail expvar.Int
+	countAdminUsers       expvar.Int
+)
 
 type Config struct {
 	Key         string `json:"kolla_key"`
@@ -53,6 +57,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// setup logging
+	expvar.Publish("countUsersWithNoEmail", &countUsersWithNoEmail)
 
 	// connect to db
 	db := &pg.PostgresStorage{}
@@ -159,24 +166,31 @@ func AddUsers(ctx context.Context, db *pg.PostgresStorage, filesDir, orgName str
 		if err != nil {
 			return fmt.Errorf("failed to get group id %w", err)
 		}
-		log.Printf("groupName: %s, groupUUID: %s\n", record[1], groupUUID)
 
 		orgUUID, err := db.GetOrgID(ctx, orgName)
 		if err != nil {
 			return fmt.Errorf("failed to get org id %w", err)
 		}
 
-		// Column headers
-		// err = csvWriter.Write([]string{"group_id", "group_name", "member_id", "member_name", "member_email", "member_username", "state", "city", "zip", "isOrganizer"})
+		// skip users without email since there is no way to contact them
+		if record[4] == "" {
+			countUsersWithNoEmail.Add(1)
+			continue
+		}
 
 		fullname := record[3]
 		splitName := strings.Split(fullname, " ")
+		firstName := splitName[0]
+		lastName := ""
+		if len(splitName) > 1 {
+			lastName = splitName[1]
+		}
 
 		isAdmin, _ := strconv.ParseBool(record[9])
 
 		user := taikaiv1.User{
-			FirstName: &splitName[0],
-			LastName:  &splitName[1],
+			FirstName: &firstName,
+			LastName:  &lastName,
 			Username:  &record[5],
 			Email:     &record[4],
 			State:     &record[6],
@@ -191,10 +205,8 @@ func AddUsers(ctx context.Context, db *pg.PostgresStorage, filesDir, orgName str
 		}
 
 		if isAdmin {
-			log.Printf("user %s is an admin of group: %s", record[3], record[1])
+			countAdminUsers.Add(1)
 		}
 	}
-
-	log.Printf("added %d users to db", len(records)-1)
 	return nil
 }
