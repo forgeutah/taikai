@@ -1,8 +1,0 @@
-{
-  "dependencies": {
-    "@bufbuild/buf": "^1.32.2",
-    "@bufbuild/protobuf": "^1.10.0",
-    "@bufbuild/protoc-gen-es": "^1.10.0",
-    "@openapitools/openapi-generator-cli": "^2.13.4"
-  }
-}

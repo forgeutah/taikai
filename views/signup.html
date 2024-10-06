@@ -1,0 +1,134 @@
+{{ define "signup" }}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>{{ .Title }}</title>
+	<link href="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.css" rel="stylesheet" />
+	<script src="https://cdn.tailwindcss.com"></script>
+	<script>
+		tailwind.config = {
+			darkMode: 'class',
+		}
+	</script>
+	<script src="https://unpkg.com/htmx.org@2.0.3"
+		integrity="sha384-0895/pl2MU10Hqc6jd4RvrthNlDiE9U1tWmX7WRESftEDRosgxNsQG/Ze9YMRzHq"
+		crossorigin="anonymous"></script>
+	<script>
+		// On page load or when changing themes, best to add inline in `head` to avoid FOUC
+		if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+			document.documentElement.classList.add('dark');
+		} else {
+			document.documentElement.classList.remove('dark')
+		}
+	</script>
+	<!-- <script> -->
+	<!-- 	htmx.onLoad(function (content) { -->
+	<!-- 		initFlowbite(); -->
+	<!-- 	}) -->
+	<!-- </script> -->
+</head>
+
+<body class="bg-white dark:bg-zinc-900 flex items-center mx-auto">
+	<div class="flex p-4 w-full max-w-md max-h-full">
+		<!-- Modal content -->
+		<div class="relative bg-white rounded-lg shadow dark:bg-zinc-700">
+			<!-- Modal header -->
+			<div
+				class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-zinc-600">
+				<h3 class="text-xl font-semibold text-zinc-900 dark:text-white">
+					Create your account
+				</h3>
+				<button type="button"
+					class="py-2.5 px-5 me-2 mb-2 text-sm font-medium text-zinc-900 focus:outline-none bg-white rounded-lg border border-zinc-200 hover:bg-zinc-100 hover:text-rose-700 focus:z-10 focus:ring-4 focus:ring-zinc-100 dark:focus:ring-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-600 dark:hover:text-white dark:hover:bg-zinc-700">Sign
+					up with Google</button>
+				<button type="button"
+					class="py-2.5 px-5 me-2 mb-2 text-sm font-medium text-zinc-900 focus:outline-none bg-white rounded-lg border border-zinc-200 hover:bg-zinc-100 hover:text-rose-700 focus:z-10 focus:ring-4 focus:ring-zinc-100 dark:focus:ring-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-600 dark:hover:text-white dark:hover:bg-zinc-700">Sign
+					up with Apple</button>
+			</div>
+			<!-- Modal body -->
+			<div class="p-4 md:p-5">
+				<form class="space-y-4" action="#">
+					<div>
+						<label for="email"
+							class="block mb-2 text-sm font-medium text-zinc-900 dark:text-white">Your
+							email</label>
+						<input type="email" name="email" id="email"
+							class="bg-zinc-50 border border-zinc-300 text-zinc-900 text-sm rounded-lg focus:ring-rose-500 focus:border-rose-500 block w-full p-2.5 dark:bg-zinc-600 dark:border-zinc-500 dark:placeholder-zinc-400 dark:text-white"
+							placeholder="name@company.com" required />
+					</div>
+					<div>
+						<label for="password"
+							class="block mb-2 text-sm font-medium text-zinc-900 dark:text-white">Your
+							password</label>
+						<input type="password" name="password" id="password"
+							placeholder="•••••••••"
+							class="bg-zinc-50 border border-zinc-300 text-zinc-900 text-sm rounded-lg focus:ring-rose-500 focus:border-rose-500 block w-full p-2.5 dark:bg-zinc-600 dark:border-zinc-500 dark:placeholder-zinc-400 dark:text-white"
+							required />
+					</div>
+					<div class="flex justify-between">
+						<div class="flex items-start">
+							<div class="flex items-center h-5">
+								<input id="remember" type="checkbox" value=""
+									class="w-4 h-4 text-rose-600 border border-zinc-300 rounded bg-zinc-50 focus:ring-3 focus:ring-rose-300 dark:bg-zinc-600 dark:border-zinc-500 dark:focus:ring-rose-600 dark:ring-offset-zinc-800 dark:focus:ring-offset-zinc-800"
+									required />
+							</div>
+							<label for="remember"
+								class="ms-2 text-sm font-medium text-zinc-900 dark:text-zinc-300">Remember
+								me</label>
+						</div>
+					</div>
+					<button type="submit"
+						class="w-full text-white bg-rose-700 hover:bg-rose-800 focus:ring-4 focus:outline-none focus:ring-rose-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-rose-600 dark:hover:bg-rose-700 dark:focus:ring-rose-800">Create
+						an account </button>
+				</form>
+			</div>
+		</div>
+	</div>
+	<script src="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.js"></script>
+	<script>var themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+		var themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+		// Change the icons inside the button based on previous settings
+		if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+			themeToggleLightIcon.classList.remove('hidden');
+		} else {
+			themeToggleDarkIcon.classList.remove('hidden');
+		}
+
+		var themeToggleBtn = document.getElementById('theme-toggle');
+
+		themeToggleBtn.addEventListener('click', function () {
+
+			// toggle icons inside button
+			themeToggleDarkIcon.classList.toggle('hidden');
+			themeToggleLightIcon.classList.toggle('hidden');
+
+			// if set via local storage previously
+			if (localStorage.getItem('color-theme')) {
+				if (localStorage.getItem('color-theme') === 'light') {
+					document.documentElement.classList.add('dark');
+					localStorage.setItem('color-theme', 'dark');
+				} else {
+					document.documentElement.classList.remove('dark');
+					localStorage.setItem('color-theme', 'light');
+				}
+
+				// if NOT set via local storage previously
+			} else {
+				if (document.documentElement.classList.contains('dark')) {
+					document.documentElement.classList.remove('dark');
+					localStorage.setItem('color-theme', 'light');
+				} else {
+					document.documentElement.classList.add('dark');
+					localStorage.setItem('color-theme', 'dark');
+				}
+			}
+
+		});	</script>
+</body>
+
+</html>
+{{ end}}

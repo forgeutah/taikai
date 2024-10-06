@@ -1,0 +1,137 @@
+{{ define "navbar" }}
+<nav class="bg-white border-zinc-200 dark:bg-zinc-800">
+	<div class="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
+		<a href="/" class="flex items-center space-x-3 rtl:space-x-reverse">
+			<img src="assets/logo.svg" class="h-8 filter grayscale" alt="Taikai Logo" />
+			<span class="self-center text-2xl font-semibold whitespace-nowrap dark:text-white">Taikai</span>
+		</a>
+		<div class="flex md:order-2 md:w-2/6">
+			<div class="relative hidden md:block w-full">
+				<div
+					class="absolute w-full inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+					<svg class="w-4 h-4 text-zinc-500 dark:text-zinc-400" aria-hidden="true"
+						xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+						<path stroke="currentColor" stroke-linecap="round"
+							stroke-linejoin="round" stroke-width="2"
+							d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
+					</svg>
+					<span class="sr-only">Search icon</span>
+				</div>
+				<input type="text" id="search-navbar"
+					class="block w-full p-2 ps-10 text-sm text-zinc-900 border border-zinc-300 rounded-lg bg-zinc-50 focus:ring-rose-500 focus:border-rose-500 dark:bg-zinc-700 dark:border-zinc-600 dark:placeholder-zinc-400 dark:text-white dark:focus:ring-rose-500 dark:focus:border-rose-500"
+					placeholder="Search Events...">
+			</div>
+			<button data-collapse-toggle="navbar-search" type="button"
+				class="order-1 inline-flex items-center p-2 w-full h-10 justify-center text-sm text-zinc-500 rounded-lg md:hidden hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-200 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:focus:ring-zinc-600"
+				aria-controls="navbar-search" aria-expanded="false">
+				<span class="sr-only">Open main menu</span>
+				<svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
+					viewBox="0 0 17 14">
+					<path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+						stroke-width="2" d="M1 1h15M1 7h15M1 13h15" />
+				</svg>
+			</button>
+		</div>
+		<div class="items-center justify-between hidden w-full md:flex md:w-auto md:order-3" id="navbar-search">
+			<div class="relative mt-3 md:hidden">
+				<div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+					<svg class="w-4 h-4 text-zinc-500 dark:text-zinc-400" aria-hidden="true"
+						xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+						<path stroke="currentColor" stroke-linecap="round"
+							stroke-linejoin="round" stroke-width="2"
+							d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
+					</svg>
+				</div>
+				<input type="text" id="search-navbar"
+					class="block w-full p-2 ps-10 text-sm text-zinc-900 border border-zinc-300 rounded-lg bg-zinc-50 focus:ring-rose-500 focus:border-rose-500 dark:bg-zinc-700 dark:border-zinc-600 dark:placeholder-zinc-400 dark:text-white dark:focus:ring-rose-500 dark:focus:border-rose-500"
+					placeholder="Search Events...">
+			</div>
+			{{ if not .IsLoggedIn }}
+			<ul
+				class="flex flex-col p-4 md:p-0 mt-4 font-medium border border-zinc-100 rounded-lg bg-zinc-50 md:space-x-8 rtl:space-x-reverse md:flex-row md:mt-0 md:border-0 md:bg-white dark:bg-zinc-800 dark:border-zinc-700">
+				<li>
+					<button data-modal-toggle="authentication-modal"
+						data-modal-target="authentication-modal"
+						class="block text-zinc-900 dark:text-white hover:bg-rose-800 focus:ring-4 focus:outline-none focus:ring-rose-300 font-medium rounded-lg text-sm px-2 py-2 mx-0 text-center dark:hover:bg-rose-700 dark:focus:ring-rose-800">Start
+						A Taikai
+					</button>
+
+				</li>
+				<li>
+					<button data-modal-toggle="authentication-modal"
+						data-modal-target="authentication-modal"
+						class="block text-zinc-900 dark:text-white hover:bg-rose-800 focus:ring-4 focus:outline-none focus:ring-rose-300 font-medium rounded-lg text-sm px-2 py-2 mx-0 text-center dark:hover:bg-rose-700 dark:focus:ring-rose-800">Log
+						In
+					</button>
+				</li>
+				<li>
+					<a href="/signup"
+						class="block text-white bg-rose-700 hover:bg-rose-800 focus:ring-4 focus:outline-none focus:ring-rose-300 font-medium rounded-lg text-sm px-4 py-2 text-center dark:bg-rose-600 dark:hover:bg-rose-700 dark:focus:ring-rose-800">Sign
+						Up</a>
+
+				</li>
+			</ul>
+			{{ else }}
+			<ul
+				class="flex flex-col p-4 md:p-0 mt-4 font-medium border border-zinc-100 rounded-lg bg-zinc-50 md:space-x-8 rtl:space-x-reverse md:flex-row md:mt-0 md:border-0 md:bg-white dark:bg-zinc-800 dark:border-zinc-700">
+				<li>
+					<a href="/create" type="button"
+						class="block text-white bg-rose-700 hover:bg-rose-800 focus:ring-4 focus:outline-none focus:ring-rose-300 font-medium rounded-lg text-sm px-4 py-2 text-center dark:hover:bg-rose-700 dark:focus:ring-rose-800">Start
+						A Taikai
+					</a>
+				</li>
+				<li>
+					<button type="button"
+						class="flex text-sm bg-zinc-800 rounded-full md:me-0 focus:ring-4 focus:ring-zinc-300 dark:focus:ring-zinc-600"
+						id="user-menu-button" aria-expanded="false"
+						data-dropdown-toggle="user-dropdown" data-dropdown-placement="bottom">
+						<span class="sr-only">Open user menu</span>
+						<img class="w-8 h-8 rounded-full"
+							src="/docs/images/people/profile-picture-3.jpg"
+							alt="user photo">
+					</button>
+					<!-- Dropdown menu -->
+					<div class="z-50 hidden my-4 text-base list-none bg-white divide-y divide-zinc-100 rounded-lg shadow dark:bg-zinc-700 dark:divide-zinc-600"
+						id="user-dropdown">
+						<div class="px-4 py-3">
+							<span class="block text-sm text-zinc-900 dark:text-white">Beric
+								Bearnson
+							</span>
+							<span
+								class="block text-sm  text-zinc-500 truncate dark:text-zinc-400">bericb@gmail.com</span>
+						</div>
+						<ul class="py-2" aria-labelledby="user-menu-button">
+							<li>
+								<a href="#"
+									class="block px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-600 dark:text-zinc-200 dark:hover:text-white">Profile</a>
+							</li>
+							<li>
+								<a href="#"
+									class="block px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-600 dark:text-zinc-200 dark:hover:text-white">Settings</a>
+							</li>
+							<li>
+								<a href="#"
+									class="block px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-600 dark:text-zinc-200 dark:hover:text-white">Log
+									Out</a>
+							</li>
+						</ul>
+					</div>
+					<button data-collapse-toggle="navbar-user" type="button"
+						class="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-zinc-500 rounded-lg md:hidden hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-zinc-200 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:focus:ring-zinc-600"
+						aria-controls="navbar-user" aria-expanded="false">
+						<span class="sr-only">Open main menu</span>
+						<svg class="w-5 h-5" aria-hidden="true"
+							xmlns="http://www.w3.org/2000/svg" fill="none"
+							viewBox="0 0 17 14">
+							<path stroke="currentColor" stroke-linecap="round"
+								stroke-linejoin="round" stroke-width="2"
+								d="M1 1h15M1 7h15M1 13h15" />
+						</svg>
+					</button>
+				</li>
+			</ul>
+			{{ end }}
+		</div>
+	</div>
+</nav>
+{{ end }}
