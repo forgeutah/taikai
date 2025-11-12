@@ -999,8 +999,16 @@ func (h *EventHandler) AddEventHost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Check if user is subscribed to the group and auto-subscribe if not
-	// This will be implemented when we add the subscription system
+	// Auto-subscribe the new host to the group
+	var groupID string
+	err = h.db.QueryRowContext(r.Context(),
+		"SELECT group_id FROM events WHERE id = $1",
+		eventID,
+	).Scan(&groupID)
+	if err == nil {
+		// Auto-subscribe host (ignore errors - subscription is optional)
+		_ = h.autoSubscribeHost(r.Context(), req.UserID, groupID)
+	}
 
 	RespondSuccess(w, http.StatusOK, host)
 }
@@ -1540,4 +1548,56 @@ func (h *EventHandler) PreviewRecurrence(w http.ResponseWriter, r *http.Request)
 		"instances": preview,
 		"count":     len(preview),
 	})
+}
+
+// autoSubscribeHost automatically subscribes an event host to the group
+func (h *EventHandler) autoSubscribeHost(ctx context.Context, userID, groupID string) error {
+	// Get group's organization ID
+	var orgID string
+	err := h.db.QueryRowContext(ctx,
+		"SELECT organization_id FROM groups WHERE id = $1",
+		groupID,
+	).Scan(&orgID)
+	if err != nil {
+		return err
+	}
+
+	// Check if user has org subscription
+	var hasOrgSub bool
+	err = h.db.QueryRowContext(ctx,
+		"SELECT EXISTS(SELECT 1 FROM org_subscriptions WHERE user_id = $1 AND organization_id = $2)",
+		userID, orgID,
+	).Scan(&hasOrgSub)
+	if err != nil {
+		hasOrgSub = false
+	}
+
+	// If user has org subscription, don't create group subscription
+	if hasOrgSub {
+		return nil
+	}
+
+	// Check if user has group subscription
+	var hasGroupSub bool
+	err = h.db.QueryRowContext(ctx,
+		"SELECT EXISTS(SELECT 1 FROM group_subscriptions WHERE user_id = $1 AND group_id = $2)",
+		userID, groupID,
+	).Scan(&hasGroupSub)
+	if err != nil {
+		hasGroupSub = false
+	}
+
+	// If user already has group subscription, don't create
+	if hasGroupSub {
+		return nil
+	}
+
+	// Create group subscription with default preferences
+	_, err = h.db.ExecContext(ctx, `
+		INSERT INTO group_subscriptions (user_id, group_id, notify_email, notify_sms, notify_discord)
+		VALUES ($1, $2, true, false, false)
+		ON CONFLICT (user_id, group_id) DO NOTHING
+	`, userID, groupID)
+
+	return err
 }

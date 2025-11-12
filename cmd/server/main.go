@@ -55,6 +55,7 @@ func main() {
 	venueHandler := api.NewVenueHandler(db)
 	eventHandler := api.NewEventHandler(db, permissionChecker)
 	rsvpHandler := api.NewRSVPHandler(db, permissionChecker)
+	subscriptionHandler := api.NewSubscriptionHandler(db, permissionChecker)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(jwtManager)
@@ -185,6 +186,19 @@ func main() {
 			// User dashboard routes
 			r.Get("/me/rsvps", rsvpHandler.GetMyRSVPs)
 			r.Get("/me/events", rsvpHandler.GetMyHostedEvents)
+			r.Get("/me/subscriptions", subscriptionHandler.GetMySubscriptions)
+
+			// Organization subscription routes
+			r.Post("/organizations/{orgId}/subscribe", subscriptionHandler.SubscribeToOrganization)
+			r.Delete("/organizations/{orgId}/subscribe", subscriptionHandler.UnsubscribeFromOrganization)
+			r.Patch("/organizations/{orgId}/subscribe", subscriptionHandler.UpdateOrgSubscription)
+			r.With(permissionMiddleware.RequireOrgAdmin).Get("/organizations/{orgId}/subscribers", subscriptionHandler.GetOrgSubscribers)
+
+			// Group subscription routes
+			r.Post("/groups/{groupId}/subscribe", subscriptionHandler.SubscribeToGroup)
+			r.Delete("/groups/{groupId}/subscribe", subscriptionHandler.UnsubscribeFromGroup)
+			r.Patch("/groups/{groupId}/subscribe", subscriptionHandler.UpdateGroupSubscription)
+			r.With(permissionMiddleware.RequireGroupAdmin).Get("/groups/{groupId}/subscribers", subscriptionHandler.GetGroupSubscribers)
 		})
 	})
 
