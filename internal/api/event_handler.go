@@ -83,6 +83,10 @@ type UpdateEventRequest struct {
 	VenueID     *string `json:"venue_id"`
 	Capacity    *int    `json:"capacity"`
 	YouTubeURL  *string `json:"youtube_url"`
+
+	// Recurrence scope for recurring event editing
+	// Options: "this_event", "future_events", "all_events"
+	RecurrenceScope *string `json:"recurrence_scope,omitempty"`
 }
 
 // ListEventsResponse for paginated event list
@@ -459,6 +463,42 @@ func (h *EventHandler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Check if this event is part of a recurring series
+	var parentEventID sql.NullString
+	var isRecurringParent bool
+	err := h.db.QueryRowContext(r.Context(),
+		"SELECT parent_event_id, is_recurring_parent FROM events WHERE id = $1",
+		eventID,
+	).Scan(&parentEventID, &isRecurringParent)
+	if err == sql.ErrNoRows {
+		RespondError(w, http.StatusNotFound, ErrCodeNotFound, "Event not found")
+		return
+	}
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to fetch event")
+		return
+	}
+
+	// Handle recurring event editing
+	isRecurringEvent := parentEventID.Valid || isRecurringParent
+	if isRecurringEvent && req.RecurrenceScope != nil {
+		switch *req.RecurrenceScope {
+		case "this_event":
+			h.updateSingleRecurringEvent(w, r, eventID, req, startTime, endTime)
+			return
+		case "future_events":
+			h.updateFutureRecurringEvents(w, r, eventID, req, startTime, endTime, parentEventID)
+			return
+		case "all_events":
+			h.updateAllRecurringEvents(w, r, eventID, req, startTime, endTime, parentEventID, isRecurringParent)
+			return
+		default:
+			RespondError(w, http.StatusBadRequest, ErrCodeBadRequest, "recurrence_scope must be 'this_event', 'future_events', or 'all_events'")
+			return
+		}
+	}
+
+	// Normal single event update
 	query := `
 		UPDATE events
 		SET
@@ -517,6 +557,271 @@ func (h *EventHandler) DeleteEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// Recurring event editing helpers
+
+// updateSingleRecurringEvent updates only this specific event instance
+// It disconnects the event from the recurring series
+func (h *EventHandler) updateSingleRecurringEvent(w http.ResponseWriter, r *http.Request, eventID string, req UpdateEventRequest, startTime, endTime *time.Time) {
+	// Update this event and disconnect it from the series
+	query := `
+		UPDATE events
+		SET
+			title = COALESCE($2, title),
+			description = COALESCE($3, description),
+			status = COALESCE($4, status),
+			start_time = COALESCE($5, start_time),
+			end_time = COALESCE($6, end_time),
+			timezone = COALESCE($7, timezone),
+			venue_id = COALESCE($8, venue_id),
+			capacity = COALESCE($9, capacity),
+			youtube_url = COALESCE($10, youtube_url),
+			parent_event_id = NULL,
+			is_recurring_parent = false,
+			recurrence_rule = NULL,
+			recurrence_end_date = NULL,
+			recurrence_count = NULL,
+			updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, group_id, title, slug, description, status, start_time, end_time,
+		          timezone, venue_id, capacity, youtube_url, parent_event_id,
+		          recurrence_rule, recurrence_end_date, recurrence_count,
+		          is_recurring_parent, created_by, created_at, updated_at
+	`
+
+	row := h.db.QueryRowContext(r.Context(), query,
+		eventID, req.Title, req.Description, req.Status, startTime, endTime,
+		req.Timezone, req.VenueID, req.Capacity, req.YouTubeURL,
+	)
+
+	event, err := h.scanEvent(row)
+	if err == sql.ErrNoRows {
+		RespondError(w, http.StatusNotFound, ErrCodeNotFound, "Event not found")
+		return
+	}
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to update event")
+		return
+	}
+
+	RespondSuccess(w, http.StatusOK, event)
+}
+
+// updateFutureRecurringEvents updates this event and all future events in the series
+func (h *EventHandler) updateFutureRecurringEvents(w http.ResponseWriter, r *http.Request, eventID string, req UpdateEventRequest, startTime, endTime *time.Time, parentEventID sql.NullString) {
+	// Get the current event's start time
+	var currentStartTime time.Time
+	err := h.db.QueryRowContext(r.Context(),
+		"SELECT start_time FROM events WHERE id = $1",
+		eventID,
+	).Scan(&currentStartTime)
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to fetch event")
+		return
+	}
+
+	// Determine which parent to use
+	var actualParentID string
+	if parentEventID.Valid {
+		actualParentID = parentEventID.String
+	} else {
+		// This event is the parent
+		actualParentID = eventID
+	}
+
+	// Update all events in the series where start_time >= current event's start_time
+	// This includes child events and potentially the parent itself
+	query := `
+		UPDATE events
+		SET
+			title = COALESCE($2, title),
+			description = COALESCE($3, description),
+			status = COALESCE($4, status),
+			timezone = COALESCE($5, timezone),
+			venue_id = COALESCE($6, venue_id),
+			capacity = COALESCE($7, capacity),
+			youtube_url = COALESCE($8, youtube_url),
+			updated_at = NOW()
+		WHERE (id = $1 OR parent_event_id = $1) AND start_time >= $9
+	`
+
+	_, err = h.db.ExecContext(r.Context(), query,
+		actualParentID, req.Title, req.Description, req.Status,
+		req.Timezone, req.VenueID, req.Capacity, req.YouTubeURL,
+		currentStartTime,
+	)
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to update future events")
+		return
+	}
+
+	// If start_time or end_time was changed, we need to update differently
+	// because we can't use COALESCE for time calculations
+	if startTime != nil || endTime != nil {
+		// Get the original duration between start and end
+		var originalStart, originalEnd time.Time
+		err := h.db.QueryRowContext(r.Context(),
+			"SELECT start_time, end_time FROM events WHERE id = $1",
+			eventID,
+		).Scan(&originalStart, &originalEnd)
+		if err == nil {
+			duration := originalEnd.Sub(originalStart)
+
+			// Update time for all future events
+			if startTime != nil && endTime != nil {
+				_, _ = h.db.ExecContext(r.Context(), `
+					UPDATE events
+					SET start_time = $2, end_time = $3, updated_at = NOW()
+					WHERE (id = $1 OR parent_event_id = $1) AND start_time >= $4
+				`, actualParentID, startTime, endTime, currentStartTime)
+			} else if startTime != nil {
+				// Keep the same duration
+				newEndTime := startTime.Add(duration)
+				_, _ = h.db.ExecContext(r.Context(), `
+					UPDATE events
+					SET start_time = $2, end_time = $3, updated_at = NOW()
+					WHERE (id = $1 OR parent_event_id = $1) AND start_time >= $4
+				`, actualParentID, startTime, newEndTime, currentStartTime)
+			}
+		}
+	}
+
+	// Return the updated event
+	event, err := h.getEventByID(r, eventID)
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Event updated but failed to fetch")
+		return
+	}
+
+	RespondSuccess(w, http.StatusOK, event)
+}
+
+// updateAllRecurringEvents updates all events in the recurring series
+func (h *EventHandler) updateAllRecurringEvents(w http.ResponseWriter, r *http.Request, eventID string, req UpdateEventRequest, startTime, endTime *time.Time, parentEventID sql.NullString, isRecurringParent bool) {
+	// Determine the parent event ID
+	var actualParentID string
+	if parentEventID.Valid {
+		// This is a child event, use its parent
+		actualParentID = parentEventID.String
+	} else if isRecurringParent {
+		// This is the parent event
+		actualParentID = eventID
+	} else {
+		// Shouldn't happen, but handle gracefully
+		RespondError(w, http.StatusBadRequest, ErrCodeBadRequest, "Event is not part of a recurring series")
+		return
+	}
+
+	// Update the parent event if fields are provided
+	if req.Title != nil || req.Description != nil || req.Status != nil ||
+		req.Timezone != nil || req.VenueID != nil || req.Capacity != nil || req.YouTubeURL != nil {
+
+		parentQuery := `
+			UPDATE events
+			SET
+				title = COALESCE($2, title),
+				description = COALESCE($3, description),
+				status = COALESCE($4, status),
+				timezone = COALESCE($5, timezone),
+				venue_id = COALESCE($6, venue_id),
+				capacity = COALESCE($7, capacity),
+				youtube_url = COALESCE($8, youtube_url),
+				updated_at = NOW()
+			WHERE id = $1
+		`
+
+		_, err := h.db.ExecContext(r.Context(), parentQuery,
+			actualParentID, req.Title, req.Description, req.Status,
+			req.Timezone, req.VenueID, req.Capacity, req.YouTubeURL,
+		)
+		if err != nil {
+			RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to update parent event")
+			return
+		}
+	}
+
+	// Update all child events with the same changes
+	childQuery := `
+		UPDATE events
+		SET
+			title = COALESCE($2, title),
+			description = COALESCE($3, description),
+			status = COALESCE($4, status),
+			timezone = COALESCE($5, timezone),
+			venue_id = COALESCE($6, venue_id),
+			capacity = COALESCE($7, capacity),
+			youtube_url = COALESCE($8, youtube_url),
+			updated_at = NOW()
+		WHERE parent_event_id = $1
+	`
+
+	_, err := h.db.ExecContext(r.Context(), childQuery,
+		actualParentID, req.Title, req.Description, req.Status,
+		req.Timezone, req.VenueID, req.Capacity, req.YouTubeURL,
+	)
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to update child events")
+		return
+	}
+
+	// If start_time or end_time is being changed, handle time updates differently
+	// Note: Changing times on "all events" means changing the recurrence pattern,
+	// which is complex. For MVP, we'll just update all existing instances.
+	if startTime != nil || endTime != nil {
+		// Get all child events and update their times proportionally
+		rows, err := h.db.QueryContext(r.Context(),
+			"SELECT id, start_time FROM events WHERE parent_event_id = $1 ORDER BY start_time",
+			actualParentID,
+		)
+		if err == nil {
+			defer rows.Close()
+
+			var originalStart time.Time
+			isFirst := true
+
+			for rows.Next() {
+				var childID string
+				var childStart time.Time
+				if err := rows.Scan(&childID, &childStart); err != nil {
+					continue
+				}
+
+				if isFirst && startTime != nil && endTime != nil {
+					// For the first event, calculate the time shift
+					originalStart = childStart
+					isFirst = false
+
+					// Apply the new times to the first event
+					_, _ = h.db.ExecContext(r.Context(),
+						"UPDATE events SET start_time = $2, end_time = $3, updated_at = NOW() WHERE id = $1",
+						childID, startTime, endTime,
+					)
+				} else if !isFirst && startTime != nil && endTime != nil {
+					// Calculate the offset from the original first event
+					offset := childStart.Sub(originalStart)
+					duration := endTime.Sub(*startTime)
+
+					newStart := startTime.Add(offset)
+					newEnd := newStart.Add(duration)
+
+					_, _ = h.db.ExecContext(r.Context(),
+						"UPDATE events SET start_time = $2, end_time = $3, updated_at = NOW() WHERE id = $1",
+						childID, newStart, newEnd,
+					)
+				}
+			}
+		}
+	}
+
+	// Return the updated event
+	event, err := h.getEventByID(r, eventID)
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Events updated but failed to fetch")
+		return
+	}
+
+	RespondSuccess(w, http.StatusOK, event)
 }
 
 // Helper functions
