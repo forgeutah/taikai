@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: taikai-postgres
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-taikai}
+      POSTGRES_USER: ${DATABASE_USER:-taikai}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-taikai_dev_password}
+    ports:
+      - "${DATABASE_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taikai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: taikai-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: taikai-mailpit
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"  # SMTP server
+      - "${MAILPIT_WEB_PORT:-8025}:8025"    # Web UI
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+volumes:
+  postgres_data:
+  redis_data:
