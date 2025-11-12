@@ -118,7 +118,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	// Hash password
 	hashedPassword, err := auth.HashPassword(req.Password)
 	if err != nil {
-		RespondError(w, http.StatusInternalServer, ErrCodeInternalServer, "Failed to process registration")
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to process registration")
 		return
 	}
 
@@ -139,14 +139,14 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 			RespondError(w, http.StatusConflict, ErrCodeConflict, "Email already registered")
 			return
 		}
-		RespondError(w, http.StatusInternalServer, ErrCodeInternalServer, "Failed to create user")
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to create user")
 		return
 	}
 
 	// Generate verification token
 	token, expiresAt, err := auth.GenerateEmailVerificationToken()
 	if err != nil {
-		RespondError(w, http.StatusInternalServer, ErrCodeInternalServer, "Failed to generate verification token")
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to generate verification token")
 		return
 	}
 
@@ -156,7 +156,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		VALUES ($1, $2, $3)
 	`, user.ID, token, expiresAt)
 	if err != nil {
-		RespondError(w, http.StatusInternalServer, ErrCodeInternalServer, "Failed to create verification token")
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to create verification token")
 		return
 	}
 
@@ -214,7 +214,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			RespondError(w, http.StatusUnauthorized, ErrCodeUnauthorized, "Invalid email or password")
 			return
 		}
-		RespondError(w, http.StatusInternalServer, ErrCodeInternalServer, "Login failed")
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Login failed")
 		return
 	}
 
@@ -234,7 +234,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	// Generate tokens
 	tokens, err := h.jwtManager.GenerateTokenPair(user.ID, user.Email, user.Name, nil)
 	if err != nil {
-		RespondError(w, http.StatusInternalServer, ErrCodeInternalServer, "Failed to generate tokens")
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to generate tokens")
 		return
 	}
 
@@ -297,7 +297,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	if h.blacklist != nil {
 		blacklisted, err := h.blacklist.IsBlacklisted(r.Context(), req.RefreshToken)
 		if err != nil {
-			RespondError(w, http.StatusInternalServer, ErrCodeInternalServer, "Token validation failed")
+			RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Token validation failed")
 			return
 		}
 		if blacklisted {
@@ -348,7 +348,7 @@ func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 			RespondError(w, http.StatusBadRequest, ErrCodeBadRequest, "Invalid or expired verification token")
 			return
 		}
-		RespondError(w, http.StatusInternalServer, ErrCodeInternalServer, "Verification failed")
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Verification failed")
 		return
 	}
 
@@ -361,7 +361,7 @@ func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	// Update user email_verified status
 	_, err = h.db.Exec("UPDATE users SET email_verified = true, updated_at = NOW() WHERE id = $1", userID)
 	if err != nil {
-		RespondError(w, http.StatusInternalServer, ErrCodeInternalServer, "Failed to verify email")
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to verify email")
 		return
 	}
 
@@ -413,7 +413,7 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	// Generate reset token
 	token, expiresAt, err := auth.GeneratePasswordResetToken()
 	if err != nil {
-		RespondError(w, http.StatusInternalServer, ErrCodeInternalServer, "Failed to generate reset token")
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to generate reset token")
 		return
 	}
 
@@ -429,7 +429,7 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		VALUES ($1, $2, $3)
 	`, user.ID, token, expiresAt)
 	if err != nil {
-		RespondError(w, http.StatusInternalServer, ErrCodeInternalServer, "Failed to create reset token")
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to create reset token")
 		return
 	}
 
@@ -476,7 +476,7 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 			RespondError(w, http.StatusBadRequest, ErrCodeBadRequest, "Invalid or expired reset token")
 			return
 		}
-		RespondError(w, http.StatusInternalServer, ErrCodeInternalServer, "Password reset failed")
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Password reset failed")
 		return
 	}
 
@@ -489,14 +489,14 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	// Hash new password
 	hashedPassword, err := auth.HashPassword(req.Password)
 	if err != nil {
-		RespondError(w, http.StatusInternalServer, ErrCodeInternalServer, "Failed to process password")
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to process password")
 		return
 	}
 
 	// Update password
 	_, err = h.db.Exec("UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2", hashedPassword, userID)
 	if err != nil {
-		RespondError(w, http.StatusInternalServer, ErrCodeInternalServer, "Failed to update password")
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to update password")
 		return
 	}
 

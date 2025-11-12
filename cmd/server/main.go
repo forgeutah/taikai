@@ -45,13 +45,17 @@ func main() {
 	jwtManager := initJWTManager()
 	emailService := initEmailService()
 	blacklist := auth.NewRedisBlacklist(redisClient)
+	permissionChecker := auth.NewPermissionChecker(db)
 
 	// Initialize handlers
 	authHandler := api.NewAuthHandler(db, jwtManager, emailService, blacklist)
 	userHandler := api.NewUserHandler(db)
+	orgHandler := api.NewOrganizationHandler(db, permissionChecker)
+	groupHandler := api.NewGroupHandler(db, permissionChecker)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(jwtManager)
+	permissionMiddleware := middleware.NewPermissionMiddleware(permissionChecker)
 
 	// Setup router
 	r := chi.NewRouter()
@@ -96,6 +100,18 @@ func main() {
 		r.Post("/auth/reset-password", authHandler.ResetPassword)
 		r.Get("/auth/verify-email", authHandler.VerifyEmail)
 
+		// Public organization routes (read-only, no auth required)
+		r.Get("/organizations", orgHandler.ListOrganizations)
+		r.Get("/organizations/{orgId}", orgHandler.GetOrganization)
+		r.Get("/organizations/slug/{slug}", orgHandler.GetOrganizationBySlug)
+		r.Get("/organizations/{orgId}/admins", orgHandler.GetOrgAdmins)
+
+		// Public group routes (read-only, no auth required)
+		r.Get("/groups", groupHandler.ListGroups)
+		r.Get("/groups/{groupId}", groupHandler.GetGroup)
+		r.Get("/groups/slug/{slug}", groupHandler.GetGroupBySlug)
+		r.Get("/groups/{groupId}/admins", groupHandler.GetGroupAdmins)
+
 		// Protected routes (require authentication)
 		r.Group(func(r chi.Router) {
 			r.Use(authMiddleware.Authenticate)
@@ -107,6 +123,18 @@ func main() {
 
 			// Auth routes that require authentication
 			r.Post("/auth/logout", authHandler.Logout)
+
+			// Organization management routes (org admin only)
+			r.With(permissionMiddleware.RequireOrgAdmin).Patch("/organizations/{orgId}", orgHandler.UpdateOrganization)
+			r.With(permissionMiddleware.RequireOrgAdmin).Post("/organizations/{orgId}/admins", orgHandler.AddOrgAdmin)
+			r.With(permissionMiddleware.RequireOrgAdmin).Delete("/organizations/{orgId}/admins/{userId}", orgHandler.RemoveOrgAdmin)
+
+			// Group management routes
+			r.With(permissionMiddleware.RequireOrgAdmin).Post("/groups", groupHandler.CreateGroup)
+			r.With(permissionMiddleware.RequireGroupAdmin).Patch("/groups/{groupId}", groupHandler.UpdateGroup)
+			r.With(permissionMiddleware.RequireOrgAdmin).Delete("/groups/{groupId}", groupHandler.DeleteGroup)
+			r.With(permissionMiddleware.RequireGroupAdmin).Post("/groups/{groupId}/admins", groupHandler.AddGroupAdmin)
+			r.With(permissionMiddleware.RequireGroupAdmin).Delete("/groups/{groupId}/admins/{userId}", groupHandler.RemoveGroupAdmin)
 		})
 	})
 

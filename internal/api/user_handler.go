@@ -51,7 +51,7 @@ func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 			RespondError(w, http.StatusNotFound, ErrCodeNotFound, "User not found")
 			return
 		}
-		RespondError(w, http.StatusInternalServer, ErrCodeInternalServer, "Failed to get user")
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to get user")
 		return
 	}
 
@@ -114,7 +114,7 @@ func (h *UserHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 			RespondError(w, http.StatusNotFound, ErrCodeNotFound, "User not found")
 			return
 		}
-		RespondError(w, http.StatusInternalServer, ErrCodeInternalServer, "Failed to update user")
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to update user")
 		return
 	}
 
@@ -132,7 +132,7 @@ func (h *UserHandler) DeleteMe(w http.ResponseWriter, r *http.Request) {
 	// Soft delete user
 	_, err := h.db.Exec("UPDATE users SET is_active = false, updated_at = NOW() WHERE id = $1", userID)
 	if err != nil {
-		RespondError(w, http.StatusInternalServer, ErrCodeInternalServer, "Failed to delete account")
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to delete account")
 		return
 	}
 
