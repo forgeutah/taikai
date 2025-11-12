@@ -52,6 +52,8 @@ func main() {
 	userHandler := api.NewUserHandler(db)
 	orgHandler := api.NewOrganizationHandler(db, permissionChecker)
 	groupHandler := api.NewGroupHandler(db, permissionChecker)
+	venueHandler := api.NewVenueHandler(db)
+	eventHandler := api.NewEventHandler(db, permissionChecker)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(jwtManager)
@@ -112,6 +114,18 @@ func main() {
 		r.Get("/groups/slug/{slug}", groupHandler.GetGroupBySlug)
 		r.Get("/groups/{groupId}/admins", groupHandler.GetGroupAdmins)
 
+		// Public venue routes (read-only, no auth required)
+		r.Get("/venues", venueHandler.ListVenues)
+		r.Get("/venues/{venueId}", venueHandler.GetVenue)
+
+		// Public event routes (read-only, no auth required)
+		r.Get("/events", eventHandler.ListEvents)
+		r.Get("/events/{eventId}", eventHandler.GetEvent)
+		r.Get("/events/slug/{slug}", eventHandler.GetEventBySlug)
+		r.Get("/events/{eventId}/hosts", eventHandler.GetEventHosts)
+		r.Get("/events/{eventId}/speakers", eventHandler.GetEventSpeakers)
+		r.Get("/events/{eventId}/schedule", eventHandler.GetEventSchedule)
+
 		// Protected routes (require authentication)
 		r.Group(func(r chi.Router) {
 			r.Use(authMiddleware.Authenticate)
@@ -135,6 +149,29 @@ func main() {
 			r.With(permissionMiddleware.RequireOrgAdmin).Delete("/groups/{groupId}", groupHandler.DeleteGroup)
 			r.With(permissionMiddleware.RequireGroupAdmin).Post("/groups/{groupId}/admins", groupHandler.AddGroupAdmin)
 			r.With(permissionMiddleware.RequireGroupAdmin).Delete("/groups/{groupId}/admins/{userId}", groupHandler.RemoveGroupAdmin)
+
+			// Venue management routes (any group admin can manage venues)
+			r.With(permissionMiddleware.RequireAnyGroupAdmin).Post("/venues", venueHandler.CreateVenue)
+			r.With(permissionMiddleware.RequireAnyGroupAdmin).Patch("/venues/{venueId}", venueHandler.UpdateVenue)
+
+			// Event management routes
+			r.With(permissionMiddleware.RequireGroupAdmin).Post("/events", eventHandler.CreateEvent)
+			r.With(permissionMiddleware.RequireEventManagement).Patch("/events/{eventId}", eventHandler.UpdateEvent)
+			r.With(permissionMiddleware.RequireGroupAdmin).Delete("/events/{eventId}", eventHandler.DeleteEvent)
+
+			// Event hosts management
+			r.With(permissionMiddleware.RequireEventManagement).Post("/events/{eventId}/hosts", eventHandler.AddEventHost)
+			r.With(permissionMiddleware.RequireEventManagement).Delete("/events/{eventId}/hosts/{userId}", eventHandler.RemoveEventHost)
+
+			// Event speakers management
+			r.With(permissionMiddleware.RequireEventManagement).Post("/events/{eventId}/speakers", eventHandler.CreateSpeaker)
+			r.With(permissionMiddleware.RequireEventManagement).Patch("/events/{eventId}/speakers/{speakerId}", eventHandler.UpdateSpeaker)
+			r.With(permissionMiddleware.RequireEventManagement).Delete("/events/{eventId}/speakers/{speakerId}", eventHandler.DeleteSpeaker)
+
+			// Event schedule management
+			r.With(permissionMiddleware.RequireEventManagement).Post("/events/{eventId}/schedule", eventHandler.CreateScheduleItem)
+			r.With(permissionMiddleware.RequireEventManagement).Patch("/events/{eventId}/schedule/{scheduleId}", eventHandler.UpdateScheduleItem)
+			r.With(permissionMiddleware.RequireEventManagement).Delete("/events/{eventId}/schedule/{scheduleId}", eventHandler.DeleteScheduleItem)
 		})
 	})
 

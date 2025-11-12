@@ -119,3 +119,19 @@ func (p *PermissionChecker) GetGroupIDForEvent(ctx context.Context, eventID stri
 	err := p.db.QueryRowContext(ctx, "SELECT group_id FROM events WHERE id = $1", eventID).Scan(&groupID)
 	return groupID, err
 }
+
+// IsAnyGroupAdmin checks if a user is a group admin of ANY group (useful for venue management)
+func (p *PermissionChecker) IsAnyGroupAdmin(ctx context.Context, userID string) (bool, error) {
+	var isAdmin bool
+	query := `
+		SELECT EXISTS(
+			SELECT 1 FROM group_admins
+			WHERE user_id = $1
+		)
+	`
+	err := p.db.QueryRowContext(ctx, query, userID).Scan(&isAdmin)
+	if err != nil {
+		return false, err
+	}
+	return isAdmin, nil
+}

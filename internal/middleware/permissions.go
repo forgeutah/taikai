@@ -108,3 +108,28 @@ func (m *PermissionMiddleware) RequireEventManagement(next http.Handler) http.Ha
 		next.ServeHTTP(w, r)
 	})
 }
+
+// RequireAnyGroupAdmin middleware ensures user is a group admin of at least one group
+// Used for venue management where any group admin can create/update venues
+func (m *PermissionMiddleware) RequireAnyGroupAdmin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userID := auth.GetUserIDFromContext(r.Context())
+		if userID == "" {
+			respondError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+
+		isAdmin, err := m.checker.IsAnyGroupAdmin(r.Context(), userID)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, "permission check failed")
+			return
+		}
+
+		if !isAdmin {
+			respondError(w, http.StatusForbidden, "group admin access required")
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
