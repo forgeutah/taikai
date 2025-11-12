@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/forgeutah/taikai/internal/auth"
+	"github.com/forgeutah/taikai/pkg/recurrence"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
@@ -65,6 +67,9 @@ type CreateEventRequest struct {
 	VenueID       *string `json:"venue_id"`
 	Capacity      *int    `json:"capacity"`
 	YouTubeURL    *string `json:"youtube_url"`
+
+	// Recurrence parameters (optional)
+	Recurrence *recurrence.RecurrenceInput `json:"recurrence,omitempty"`
 }
 
 // UpdateEventRequest for updating event
@@ -328,12 +333,45 @@ func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create event
+	// Handle recurrence if provided
+	var rruleStr *string
+	var recurrenceEndDate *time.Time
+	var recurrenceCount *int
+	isRecurringParent := false
+
+	if req.Recurrence != nil {
+		// Validate recurrence input
+		if err := recurrence.ValidateRecurrenceInput(*req.Recurrence); err != nil {
+			RespondError(w, http.StatusBadRequest, ErrCodeBadRequest, "Invalid recurrence: "+err.Error())
+			return
+		}
+
+		// Generate RRULE
+		rule, err := recurrence.GenerateRRule(*req.Recurrence, startTime)
+		if err != nil {
+			RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to generate recurrence rule")
+			return
+		}
+
+		rruleStr = &rule
+		isRecurringParent = true
+
+		// Set end conditions
+		if req.Recurrence.Until != nil {
+			recurrenceEndDate = req.Recurrence.Until
+		}
+		if req.Recurrence.Count != nil {
+			recurrenceCount = req.Recurrence.Count
+		}
+	}
+
+	// Create event (parent if recurring)
 	query := `
 		INSERT INTO events (
 			group_id, title, slug, description, status, start_time, end_time,
-			timezone, venue_id, capacity, youtube_url, created_by
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+			timezone, venue_id, capacity, youtube_url, created_by,
+			recurrence_rule, recurrence_end_date, recurrence_count, is_recurring_parent
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 		RETURNING id, group_id, title, slug, description, status, start_time, end_time,
 		          timezone, venue_id, capacity, youtube_url, parent_event_id,
 		          recurrence_rule, recurrence_end_date, recurrence_count,
@@ -344,6 +382,7 @@ func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 		req.GroupID, req.Title, eventSlug, req.Description, req.Status,
 		startTime, endTime, req.Timezone, req.VenueID, req.Capacity,
 		req.YouTubeURL, userID,
+		rruleStr, recurrenceEndDate, recurrenceCount, isRecurringParent,
 	)
 
 	event, err := h.scanEvent(row)
@@ -360,6 +399,15 @@ func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Log but don't fail the request
 		// In production, we'd log this properly
+	}
+
+	// Generate child event instances if recurring
+	if req.Recurrence != nil && rruleStr != nil {
+		err = h.generateEventInstances(r.Context(), event.ID, *rruleStr, startTime, endTime, req)
+		if err != nil {
+			// Log error but don't fail - instances can be regenerated later
+			// In production, we'd log this properly
+		}
 	}
 
 	RespondSuccess(w, http.StatusOK, event)
@@ -1079,4 +1127,112 @@ func (h *EventHandler) enrichEventWithRSVPData(r *http.Request, event *EventResp
 			event.UserRSVPStatus = &status
 		}
 	}
+}
+
+// generateEventInstances creates child event instances from a recurring event
+func (h *EventHandler) generateEventInstances(ctx context.Context, parentEventID string, rruleStr string, startTime, endTime time.Time, req CreateEventRequest) error {
+	// Generate instances (12 months ahead)
+	options := recurrence.GenerationOptions{
+		StartDate:    time.Now(),
+		LookAhead:    12,
+		MaxInstances: 365,
+	}
+
+	instances, err := recurrence.GenerateInstances(rruleStr, startTime, endTime, options)
+	if err != nil {
+		return err
+	}
+
+	// Create child events in bulk
+	for _, instance := range instances {
+		// Generate unique slug for child event
+		childSlug := slug.Make(req.Title) + "-" + instance.StartTime.Format("2006-01-02")
+
+		// Ensure uniqueness
+		var exists bool
+		err := h.db.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM events WHERE slug = $1)", childSlug).Scan(&exists)
+		if err != nil {
+			continue // Skip this instance on error
+		}
+		if exists {
+			childSlug = childSlug + "-" + uuid.New().String()[:8]
+		}
+
+		// Insert child event
+		_, err = h.db.ExecContext(ctx, `
+			INSERT INTO events (
+				group_id, title, slug, description, status, start_time, end_time,
+				timezone, venue_id, capacity, youtube_url, created_by, parent_event_id
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		`,
+			req.GroupID, req.Title, childSlug, req.Description, req.Status,
+			instance.StartTime, instance.EndTime, req.Timezone, req.VenueID,
+			req.Capacity, req.YouTubeURL, req.GroupID, // Use group_id as created_by for child events
+			parentEventID,
+		)
+		if err != nil {
+			// Log error but continue with other instances
+			continue
+		}
+	}
+
+	return nil
+}
+
+// PreviewRecurrence handles POST /api/v1/events/preview-recurrence
+func (h *EventHandler) PreviewRecurrence(w http.ResponseWriter, r *http.Request) {
+	userID := auth.GetUserIDFromContext(r.Context())
+	if userID == "" {
+		RespondError(w, http.StatusUnauthorized, ErrCodeUnauthorized, "unauthorized")
+		return
+	}
+
+	var req struct {
+		StartTime  string                      `json:"start_time"`
+		EndTime    string                      `json:"end_time"`
+		Recurrence recurrence.RecurrenceInput  `json:"recurrence"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		RespondError(w, http.StatusBadRequest, ErrCodeBadRequest, "Invalid request body")
+		return
+	}
+
+	// Parse times
+	startTime, err := time.Parse(time.RFC3339, req.StartTime)
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, ErrCodeBadRequest, "invalid start_time format (use RFC3339)")
+		return
+	}
+	endTime, err := time.Parse(time.RFC3339, req.EndTime)
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, ErrCodeBadRequest, "invalid end_time format (use RFC3339)")
+		return
+	}
+
+	// Generate preview (first 50 occurrences)
+	instances, err := recurrence.PreviewInstances(req.Recurrence, startTime, endTime, 50)
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, ErrCodeBadRequest, "Invalid recurrence: "+err.Error())
+		return
+	}
+
+	// Convert to response format
+	type PreviewInstance struct {
+		StartTime string `json:"start_time"`
+		EndTime   string `json:"end_time"`
+	}
+
+	preview := make([]PreviewInstance, len(instances))
+	for i, inst := range instances {
+		preview[i] = PreviewInstance{
+			StartTime: inst.StartTime.Format(time.RFC3339),
+			EndTime:   inst.EndTime.Format(time.RFC3339),
+		}
+	}
+
+	RespondSuccess(w, http.StatusOK, map[string]interface{}{
+		"instances": preview,
+		"count":     len(preview),
+	})
 }

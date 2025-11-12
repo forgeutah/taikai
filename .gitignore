@@ -35,3 +35,4 @@ cockroach-root.crt
 				playwright-report/
 
 				*.env
+bin/

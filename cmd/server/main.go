@@ -160,6 +160,7 @@ func main() {
 
 			// Event management routes
 			r.With(permissionMiddleware.RequireGroupAdmin).Post("/events", eventHandler.CreateEvent)
+			r.Post("/events/preview-recurrence", eventHandler.PreviewRecurrence) // Preview recurring events
 			r.With(permissionMiddleware.RequireEventManagement).Patch("/events/{eventId}", eventHandler.UpdateEvent)
 			r.With(permissionMiddleware.RequireGroupAdmin).Delete("/events/{eventId}", eventHandler.DeleteEvent)
 
