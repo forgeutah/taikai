@@ -49,6 +49,8 @@ type EventResponse struct {
 	CreatedBy          string     `json:"created_by"`
 	CreatedAt          string     `json:"created_at"`
 	UpdatedAt          string     `json:"updated_at"`
+	RSVPCount          int        `json:"rsvp_count"`            // Count of attending RSVPs
+	UserRSVPStatus     *string    `json:"user_rsvp_status,omitempty"` // User's RSVP status if authenticated
 }
 
 // CreateEventRequest for creating a new event
@@ -109,6 +111,9 @@ func (h *EventHandler) GetEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Enrich with RSVP data
+	h.enrichEventWithRSVPData(r, &event)
+
 	RespondSuccess(w, http.StatusOK, event)
 }
 
@@ -139,6 +144,9 @@ func (h *EventHandler) GetEventBySlug(w http.ResponseWriter, r *http.Request) {
 		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to get event")
 		return
 	}
+
+	// Enrich with RSVP data
+	h.enrichEventWithRSVPData(r, &event)
 
 	RespondSuccess(w, http.StatusOK, event)
 }
@@ -1045,4 +1053,30 @@ func (h *EventHandler) DeleteScheduleItem(w http.ResponseWriter, r *http.Request
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// enrichEventWithRSVPData adds RSVP count and user's RSVP status to an event
+func (h *EventHandler) enrichEventWithRSVPData(r *http.Request, event *EventResponse) {
+	// Get RSVP count
+	var count int
+	err := h.db.QueryRowContext(r.Context(),
+		"SELECT COUNT(*) FROM event_rsvps WHERE event_id = $1 AND status = 'attending'",
+		event.ID,
+	).Scan(&count)
+	if err == nil {
+		event.RSVPCount = count
+	}
+
+	// Get user's RSVP status if authenticated
+	userID := auth.GetUserIDFromContext(r.Context())
+	if userID != "" {
+		var status string
+		err := h.db.QueryRowContext(r.Context(),
+			"SELECT status FROM event_rsvps WHERE user_id = $1 AND event_id = $2",
+			userID, event.ID,
+		).Scan(&status)
+		if err == nil {
+			event.UserRSVPStatus = &status
+		}
+	}
 }

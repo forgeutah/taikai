@@ -54,6 +54,7 @@ func main() {
 	groupHandler := api.NewGroupHandler(db, permissionChecker)
 	venueHandler := api.NewVenueHandler(db)
 	eventHandler := api.NewEventHandler(db, permissionChecker)
+	rsvpHandler := api.NewRSVPHandler(db, permissionChecker)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(jwtManager)
@@ -126,6 +127,9 @@ func main() {
 		r.Get("/events/{eventId}/speakers", eventHandler.GetEventSpeakers)
 		r.Get("/events/{eventId}/schedule", eventHandler.GetEventSchedule)
 
+		// Public RSVP routes (count public, details for hosts/admins)
+		r.Get("/events/{eventId}/rsvps", rsvpHandler.GetEventRSVPs)
+
 		// Protected routes (require authentication)
 		r.Group(func(r chi.Router) {
 			r.Use(authMiddleware.Authenticate)
@@ -172,6 +176,14 @@ func main() {
 			r.With(permissionMiddleware.RequireEventManagement).Post("/events/{eventId}/schedule", eventHandler.CreateScheduleItem)
 			r.With(permissionMiddleware.RequireEventManagement).Patch("/events/{eventId}/schedule/{scheduleId}", eventHandler.UpdateScheduleItem)
 			r.With(permissionMiddleware.RequireEventManagement).Delete("/events/{eventId}/schedule/{scheduleId}", eventHandler.DeleteScheduleItem)
+
+			// RSVP management
+			r.Post("/events/{eventId}/rsvp", rsvpHandler.CreateOrUpdateRSVP)
+			r.Delete("/events/{eventId}/rsvp", rsvpHandler.DeleteRSVP)
+
+			// User dashboard routes
+			r.Get("/me/rsvps", rsvpHandler.GetMyRSVPs)
+			r.Get("/me/events", rsvpHandler.GetMyHostedEvents)
 		})
 	})
 
