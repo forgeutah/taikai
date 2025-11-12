@@ -1,0 +1,42 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taikai-worker
+  namespace: taikai
+  labels:
+    app: taikai
+    component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: taikai
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: taikai
+        component: worker
+    spec:
+      containers:
+      - name: worker
+        image: forgeutah/taikai-worker:latest  # Change to your image
+        imagePullPolicy: Always
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://$(DATABASE_USER):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)?sslmode=disable"
+        - name: REDIS_URL
+          value: "redis://$(REDIS_HOST):$(REDIS_PORT)"
+        envFrom:
+        - configMapRef:
+            name: taikai-config
+        - secretRef:
+            name: taikai-secrets
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"

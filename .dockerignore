@@ -1,1 +1,69 @@
+# Git files
+.git
+.gitignore
+.github
+
+# Development files
+.env
+.env.local
+*.md
+!README.md
+
+# Build artifacts
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test files
+*_test.go
+coverage.out
+coverage.html
 server/test/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Kubernetes files
+k8s/
+helm/
+
+# Documentation
+docs/
+
+# Development tools
+.copier-answers.yml
+tools.sh
+makefile
+
+# Node modules (if any)
+node_modules/
+package-lock.json
+package.json
+
+# Skaffold
+skaffold.yaml
+skaffold-values.yaml
+
+# Protos (old structure)
+protos/
+
+# Old server directory
+server/
+
+# Other
+meetup_importer/

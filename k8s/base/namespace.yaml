@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: taikai
+  labels:
+    app: taikai
+    environment: production

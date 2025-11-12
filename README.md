@@ -265,7 +265,90 @@ After running `make seed`:
 
 ## Deployment
 
-See `docs/DEPLOYMENT.md` for production deployment instructions.
+Taikai is designed to be self-hosted by organizations. We provide multiple deployment options:
+
+### Production Deployment Options
+
+1. **Kubernetes with Helm** (Recommended)
+   - Easy setup and management
+   - Auto-scaling and high availability
+   - See `docs/DEPLOYMENT.md` and `docs/SELF-HOSTING.md`
+
+2. **Docker Compose**
+   - Simple single-server deployment
+   - Good for small organizations
+   - See `docker-compose.yml`
+
+3. **Raw Kubernetes Manifests**
+   - Full control over deployment
+   - See `k8s/` directory
+
+### Quick Deploy with Helm
+
+```bash
+# Clone repository
+git clone https://github.com/forgeutah/taikai.git
+cd taikai/helm/taikai
+
+# Create configuration
+cat > my-values.yaml <<EOF
+organization:
+  name: "My Organization"
+  domain: "events.myorg.com"
+  email: "noreply@myorg.com"
+
+config:
+  jwt:
+    secret: "$(openssl rand -base64 32)"
+
+postgresql:
+  auth:
+    password: "$(openssl rand -base64 32)"
+
+config:
+  email:
+    provider: smtp
+    smtp:
+      host: "smtp.sendgrid.net"
+      port: 587
+      username: "apikey"
+      password: "YOUR_SENDGRID_API_KEY"
+
+ingress:
+  hosts:
+    - host: events.myorg.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: taikai-tls
+      hosts:
+        - events.myorg.com
+EOF
+
+# Deploy
+helm install taikai . -f my-values.yaml --create-namespace --namespace taikai
+```
+
+### Building Docker Images
+
+```bash
+# Build all images
+./build-docker.sh v0.1.0
+
+# Push to registry
+./push-docker.sh v0.1.0
+```
+
+### Cost Comparison
+
+**Meetup.com** (5 groups): ~$900/year
+**Self-Hosted Taikai**: ~$300-500/year
+**Savings**: ~$400-600/year 💰
+
+Plus: Full data control, unlimited customization, no vendor lock-in!
+
+See our detailed **[Self-Hosting Guide](docs/SELF-HOSTING.md)** for organizations.
 
 ## Contributing
 
@@ -290,7 +373,9 @@ Forge Utah Foundation is a local tech community in Utah built for developers, en
 ### Phase 1 (MVP - Current)
 - ✅ Project setup and infrastructure
 - ✅ Database schema and migrations
-- 🚧 User authentication and profiles
+- ✅ User authentication and profiles
+- ✅ Docker and Kubernetes deployment
+- ✅ Helm chart for easy deployment
 - 🚧 Organization and group management
 - 🚧 Event creation and management
 - 🚧 RSVP system

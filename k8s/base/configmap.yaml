@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: taikai-config
+  namespace: taikai
+data:
+  APP_ENV: "production"
+  APP_PORT: "8080"
+  BASE_URL: "https://events.forgeutah.org"  # Change this for your org
+
+  # Database (will use secrets for credentials)
+  DATABASE_HOST: "taikai-postgres"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "taikai"
+  DATABASE_POOL_SIZE: "25"
+
+  # Redis
+  REDIS_HOST: "taikai-redis"
+  REDIS_PORT: "6379"
+  REDIS_POOL_SIZE: "10"
+
+  # JWT
+  JWT_EXPIRATION: "900"  # 15 minutes
+  REFRESH_TOKEN_EXPIRATION: "604800"  # 7 days
+
+  # Email - SMTP Configuration
+  SMTP_HOST: "smtp.sendgrid.net"  # Or your SMTP provider
+  SMTP_PORT: "587"
+  SMTP_FROM_EMAIL: "noreply@forgeutah.org"  # Change for your org
+  SMTP_FROM_NAME: "Forge Utah Events"  # Change for your org
+
+  # Asynq
+  ASYNQ_REDIS_ADDR: "taikai-redis:6379"
+  ASYNQ_CONCURRENCY: "10"
+
+  # Logging
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"

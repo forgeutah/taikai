@@ -1,0 +1,178 @@
+# Default values for Taikai Helm chart
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Organization Configuration
+organization:
+  name: "Forge Utah Foundation"  # Change for your organization
+  domain: "events.forgeutah.org"  # Change for your organization
+  email: "noreply@forgeutah.org"  # Change for your organization
+
+# Image configuration
+image:
+  repository: forgeutah/taikai
+  pullPolicy: Always
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Server configuration
+server:
+  replicaCount: 2
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "1000m"
+
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+
+# Worker configuration
+worker:
+  replicaCount: 1
+
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "500m"
+
+# Database configuration
+postgresql:
+  enabled: true
+  auth:
+    username: taikai
+    password: "CHANGEME_DATABASE_PASSWORD"  # Change in production
+    database: taikai
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+
+  # To use external PostgreSQL, set enabled: false and configure:
+  # externalPostgresql:
+  #   host: your-postgres-host
+  #   port: 5432
+  #   database: taikai
+  #   username: taikai
+  #   password: your-password
+
+# Redis configuration
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: true
+      size: 5Gi
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+
+  # To use external Redis, set enabled: false and configure:
+  # externalRedis:
+  #   host: your-redis-host
+  #   port: 6379
+
+# Application configuration
+config:
+  app:
+    env: production
+    port: 8080
+    logLevel: info
+    logFormat: json
+
+  jwt:
+    # MUST be changed in production - use a random 32+ character string
+    secret: "CHANGEME_RANDOM_SECRET_KEY_AT_LEAST_32_CHARS"
+    accessTokenExpiry: 900  # 15 minutes
+    refreshTokenExpiry: 604800  # 7 days
+
+  email:
+    provider: smtp  # smtp or ses
+    smtp:
+      host: "smtp.sendgrid.net"
+      port: 587
+      username: ""
+      password: ""
+    ses:
+      region: "us-east-1"
+      accessKey: ""
+      secretKey: ""
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  hosts:
+    - host: events.forgeutah.org  # Change for your organization
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: taikai-tls
+      hosts:
+        - events.forgeutah.org  # Change for your organization
+
+# Service account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Security context
+podSecurityContext:
+  fsGroup: 1000
+  runAsNonRoot: true
+  runAsUser: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+
+# Node selection
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Monitoring (optional)
+metrics:
+  enabled: false
+  serviceMonitor:
+    enabled: false

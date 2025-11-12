@@ -1,0 +1,123 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taikai-server
+  namespace: taikai
+  labels:
+    app: taikai
+    component: server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: taikai
+      component: server
+  template:
+    metadata:
+      labels:
+        app: taikai
+        component: server
+    spec:
+      initContainers:
+      # Run migrations before starting server
+      - name: migrate
+        image: forgeutah/taikai:latest  # Change to your image
+        imagePullPolicy: Always
+        command: ["/app/migrate"]
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://$(DATABASE_USER):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)?sslmode=disable"
+        envFrom:
+        - configMapRef:
+            name: taikai-config
+        - secretRef:
+            name: taikai-secrets
+      containers:
+      - name: server
+        image: forgeutah/taikai:latest  # Change to your image
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://$(DATABASE_USER):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)?sslmode=disable"
+        - name: REDIS_URL
+          value: "redis://$(REDIS_HOST):$(REDIS_PORT)"
+        envFrom:
+        - configMapRef:
+            name: taikai-config
+        - secretRef:
+            name: taikai-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: taikai-server
+  namespace: taikai
+  labels:
+    app: taikai
+    component: server
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: taikai
+    component: server
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: taikai-ingress
+  namespace: taikai
+  annotations:
+    # Uncomment and configure for your ingress controller
+    # kubernetes.io/ingress.class: nginx
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  # Uncomment for TLS
+  # tls:
+  # - hosts:
+  #   - events.forgeutah.org
+  #   secretName: taikai-tls
+  rules:
+  - host: events.forgeutah.org  # Change for your org
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: taikai-server
+            port:
+              number: 80

@@ -1,0 +1,18 @@
+apiVersion: v2
+name: taikai
+description: Open-source event management platform for tech communities
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - events
+  - meetup
+  - community
+  - self-hosted
+home: https://github.com/forgeutah/taikai
+sources:
+  - https://github.com/forgeutah/taikai
+maintainers:
+  - name: Forge Utah Foundation
+    email: admin@forgeutah.org
+icon: https://forgeutah.org/logo.png
