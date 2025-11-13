@@ -1231,6 +1231,227 @@ func (h *EventHandler) DeleteSpeaker(w http.ResponseWriter, r *http.Request) {
 }
 
 // ====================
+// Sponsors Management
+// ====================
+
+// SponsorResponse represents a sponsor
+type SponsorResponse struct {
+	ID           string  `json:"id"`
+	EventID      string  `json:"event_id"`
+	CompanyName  string  `json:"company_name"`
+	LogoURL      *string `json:"logo_url"`
+	Description  *string `json:"description"`
+	Email        string  `json:"email"`
+	Website      *string `json:"website"`
+	DisplayOrder int     `json:"display_order"`
+	CreatedAt    string  `json:"created_at"`
+}
+
+// CreateSponsorRequest for creating a sponsor
+type CreateSponsorRequest struct {
+	CompanyName  string  `json:"company_name"`
+	LogoURL      *string `json:"logo_url"`
+	Description  *string `json:"description"`
+	Email        string  `json:"email"`
+	Website      *string `json:"website"`
+	DisplayOrder int     `json:"display_order"`
+}
+
+// UpdateSponsorRequest for updating a sponsor
+type UpdateSponsorRequest struct {
+	CompanyName  *string `json:"company_name"`
+	LogoURL      *string `json:"logo_url"`
+	Description  *string `json:"description"`
+	Email        *string `json:"email"`
+	Website      *string `json:"website"`
+	DisplayOrder *int    `json:"display_order"`
+}
+
+// GetEventSponsors handles GET /api/v1/events/:eventId/sponsors
+func (h *EventHandler) GetEventSponsors(w http.ResponseWriter, r *http.Request) {
+	eventID := chi.URLParam(r, "eventId")
+	if eventID == "" {
+		RespondError(w, http.StatusBadRequest, ErrCodeBadRequest, "event ID is required")
+		return
+	}
+
+	query := `
+		SELECT id, event_id, company_name, logo_url, description, email, website, display_order, created_at
+		FROM event_sponsors
+		WHERE event_id = $1
+		ORDER BY display_order ASC, created_at ASC
+	`
+
+	rows, err := h.db.QueryContext(r.Context(), query, eventID)
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to get sponsors")
+		return
+	}
+	defer rows.Close()
+
+	sponsors := []SponsorResponse{}
+	for rows.Next() {
+		var sponsor SponsorResponse
+		var logoURL, description, website sql.NullString
+
+		err := rows.Scan(&sponsor.ID, &sponsor.EventID, &sponsor.CompanyName, &logoURL, &description,
+			&sponsor.Email, &website, &sponsor.DisplayOrder, &sponsor.CreatedAt)
+		if err != nil {
+			RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to scan sponsor")
+			return
+		}
+
+		if logoURL.Valid {
+			sponsor.LogoURL = &logoURL.String
+		}
+		if description.Valid {
+			sponsor.Description = &description.String
+		}
+		if website.Valid {
+			sponsor.Website = &website.String
+		}
+
+		sponsors = append(sponsors, sponsor)
+	}
+
+	RespondSuccess(w, http.StatusOK, sponsors)
+}
+
+// CreateSponsor handles POST /api/v1/events/:eventId/sponsors
+func (h *EventHandler) CreateSponsor(w http.ResponseWriter, r *http.Request) {
+	eventID := chi.URLParam(r, "eventId")
+	if eventID == "" {
+		RespondError(w, http.StatusBadRequest, ErrCodeBadRequest, "event ID is required")
+		return
+	}
+
+	var req CreateSponsorRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		RespondError(w, http.StatusBadRequest, ErrCodeBadRequest, "Invalid request body")
+		return
+	}
+
+	if req.CompanyName == "" {
+		RespondError(w, http.StatusBadRequest, ErrCodeBadRequest, "company_name is required")
+		return
+	}
+
+	if req.Email == "" {
+		RespondError(w, http.StatusBadRequest, ErrCodeBadRequest, "email is required")
+		return
+	}
+
+	// TODO: Add AI logo generation feature
+	// Future enhancement: Allow users to generate sponsor logos using AI if no logo is provided
+	// This could use DALL-E, Midjourney API, or similar services to create professional company logos
+
+	query := `
+		INSERT INTO event_sponsors (event_id, company_name, logo_url, description, email, website, display_order)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id, event_id, company_name, logo_url, description, email, website, display_order, created_at
+	`
+
+	var sponsor SponsorResponse
+	var logoURL, description, website sql.NullString
+
+	err := h.db.QueryRowContext(r.Context(), query,
+		eventID, req.CompanyName, req.LogoURL, req.Description, req.Email, req.Website, req.DisplayOrder,
+	).Scan(&sponsor.ID, &sponsor.EventID, &sponsor.CompanyName, &logoURL, &description,
+		&sponsor.Email, &website, &sponsor.DisplayOrder, &sponsor.CreatedAt)
+
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to create sponsor")
+		return
+	}
+
+	if logoURL.Valid {
+		sponsor.LogoURL = &logoURL.String
+	}
+	if description.Valid {
+		sponsor.Description = &description.String
+	}
+	if website.Valid {
+		sponsor.Website = &website.String
+	}
+
+	RespondSuccess(w, http.StatusOK, sponsor)
+}
+
+// UpdateSponsor handles PATCH /api/v1/events/:eventId/sponsors/:sponsorId
+func (h *EventHandler) UpdateSponsor(w http.ResponseWriter, r *http.Request) {
+	sponsorID := chi.URLParam(r, "sponsorId")
+	if sponsorID == "" {
+		RespondError(w, http.StatusBadRequest, ErrCodeBadRequest, "sponsor ID is required")
+		return
+	}
+
+	var req UpdateSponsorRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		RespondError(w, http.StatusBadRequest, ErrCodeBadRequest, "Invalid request body")
+		return
+	}
+
+	query := `
+		UPDATE event_sponsors
+		SET
+			company_name = COALESCE($2, company_name),
+			logo_url = COALESCE($3, logo_url),
+			description = COALESCE($4, description),
+			email = COALESCE($5, email),
+			website = COALESCE($6, website),
+			display_order = COALESCE($7, display_order)
+		WHERE id = $1
+		RETURNING id, event_id, company_name, logo_url, description, email, website, display_order, created_at
+	`
+
+	var sponsor SponsorResponse
+	var logoURL, description, website sql.NullString
+
+	err := h.db.QueryRowContext(r.Context(), query,
+		sponsorID, req.CompanyName, req.LogoURL, req.Description, req.Email, req.Website, req.DisplayOrder,
+	).Scan(&sponsor.ID, &sponsor.EventID, &sponsor.CompanyName, &logoURL, &description,
+		&sponsor.Email, &website, &sponsor.DisplayOrder, &sponsor.CreatedAt)
+
+	if err == sql.ErrNoRows {
+		RespondError(w, http.StatusNotFound, ErrCodeNotFound, "Sponsor not found")
+		return
+	}
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to update sponsor")
+		return
+	}
+
+	if logoURL.Valid {
+		sponsor.LogoURL = &logoURL.String
+	}
+	if description.Valid {
+		sponsor.Description = &description.String
+	}
+	if website.Valid {
+		sponsor.Website = &website.String
+	}
+
+	RespondSuccess(w, http.StatusOK, sponsor)
+}
+
+// DeleteSponsor handles DELETE /api/v1/events/:eventId/sponsors/:sponsorId
+func (h *EventHandler) DeleteSponsor(w http.ResponseWriter, r *http.Request) {
+	sponsorID := chi.URLParam(r, "sponsorId")
+	if sponsorID == "" {
+		RespondError(w, http.StatusBadRequest, ErrCodeBadRequest, "sponsor ID is required")
+		return
+	}
+
+	_, err := h.db.ExecContext(r.Context(), "DELETE FROM event_sponsors WHERE id = $1", sponsorID)
+	if err != nil {
+		RespondError(w, http.StatusInternalServerError, ErrCodeInternalServer, "Failed to delete sponsor")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ====================
 // Schedule Management
 // ====================
 

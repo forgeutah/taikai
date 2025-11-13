@@ -57,6 +57,17 @@ func main() {
 	rsvpHandler := api.NewRSVPHandler(db, permissionChecker)
 	subscriptionHandler := api.NewSubscriptionHandler(db, permissionChecker)
 
+	// Initialize upload handler
+	uploadDir := os.Getenv("UPLOAD_DIR")
+	if uploadDir == "" {
+		uploadDir = "./uploads"
+	}
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		baseURL = "http://localhost:8080"
+	}
+	uploadHandler := api.NewUploadHandler(uploadDir, baseURL)
+
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(jwtManager)
 	permissionMiddleware := middleware.NewPermissionMiddleware(permissionChecker)
@@ -86,6 +97,10 @@ func main() {
 			next.ServeHTTP(w, r)
 		})
 	})
+
+	// Serve uploaded files
+	fileServer := http.FileServer(http.Dir(uploadDir))
+	r.Handle("/uploads/*", http.StripPrefix("/uploads/", fileServer))
 
 	// Health check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -126,6 +141,7 @@ func main() {
 		r.Get("/events/slug/{slug}", eventHandler.GetEventBySlug)
 		r.Get("/events/{eventId}/hosts", eventHandler.GetEventHosts)
 		r.Get("/events/{eventId}/speakers", eventHandler.GetEventSpeakers)
+		r.Get("/events/{eventId}/sponsors", eventHandler.GetEventSponsors)
 		r.Get("/events/{eventId}/schedule", eventHandler.GetEventSchedule)
 
 		// Public RSVP routes (count public, details for hosts/admins)
@@ -142,6 +158,9 @@ func main() {
 
 			// Auth routes that require authentication
 			r.Post("/auth/logout", authHandler.Logout)
+
+			// File upload routes (authenticated users only)
+			r.Post("/upload/image", uploadHandler.UploadImage)
 
 			// Organization management routes (org admin only)
 			r.With(permissionMiddleware.RequireOrgAdmin).Patch("/organizations/{orgId}", orgHandler.UpdateOrganization)
@@ -173,6 +192,11 @@ func main() {
 			r.With(permissionMiddleware.RequireEventManagement).Post("/events/{eventId}/speakers", eventHandler.CreateSpeaker)
 			r.With(permissionMiddleware.RequireEventManagement).Patch("/events/{eventId}/speakers/{speakerId}", eventHandler.UpdateSpeaker)
 			r.With(permissionMiddleware.RequireEventManagement).Delete("/events/{eventId}/speakers/{speakerId}", eventHandler.DeleteSpeaker)
+
+			// Event sponsors management
+			r.With(permissionMiddleware.RequireEventManagement).Post("/events/{eventId}/sponsors", eventHandler.CreateSponsor)
+			r.With(permissionMiddleware.RequireEventManagement).Patch("/events/{eventId}/sponsors/{sponsorId}", eventHandler.UpdateSponsor)
+			r.With(permissionMiddleware.RequireEventManagement).Delete("/events/{eventId}/sponsors/{sponsorId}", eventHandler.DeleteSponsor)
 
 			// Event schedule management
 			r.With(permissionMiddleware.RequireEventManagement).Post("/events/{eventId}/schedule", eventHandler.CreateScheduleItem)

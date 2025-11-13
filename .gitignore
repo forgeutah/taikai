@@ -36,3 +36,4 @@ cockroach-root.crt
 
 				*.env
 bin/
+uploads/
