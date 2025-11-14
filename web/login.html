@@ -104,9 +104,8 @@
             const password = document.getElementById('loginPassword').value;
 
             try {
-                const response = await api.login(email, password);
-                localStorage.setItem('token', response.access_token);
-                localStorage.setItem('refresh_token', response.refresh_token);
+                // API client now handles token storage automatically
+                await api.login(email, password);
 
                 showMessage('Login successful! Redirecting...', 'success');
                 setTimeout(() => {
@@ -136,9 +135,8 @@
             };
 
             try {
-                const response = await api.register(userData);
-                localStorage.setItem('token', response.access_token);
-                localStorage.setItem('refresh_token', response.refresh_token);
+                // API client now handles token storage automatically
+                await api.register(userData);
 
                 showMessage('Account created successfully! Redirecting...', 'success');
                 setTimeout(() => {

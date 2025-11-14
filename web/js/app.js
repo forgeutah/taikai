@@ -1,10 +1,46 @@
 // Main app JavaScript
 
-// Check authentication on all pages
-function checkAuth() {
-    const token = localStorage.getItem('token');
-    return !!token;
-}
+// Authentication helper
+const auth = {
+    isAuthenticated() {
+        const token = localStorage.getItem('token');
+        return !!token;
+    },
+
+    getToken() {
+        return localStorage.getItem('token');
+    },
+
+    async logout() {
+        try {
+            await api.logout();
+        } catch (error) {
+            console.error('Logout error:', error);
+        } finally {
+            localStorage.removeItem('token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user');
+            window.location.href = '/';
+        }
+    },
+
+    updateUI() {
+        const isAuth = this.isAuthenticated();
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const profileBtn = document.getElementById('profileBtn');
+
+        if (isAuth) {
+            if (loginBtn) loginBtn.style.display = 'none';
+            if (logoutBtn) logoutBtn.style.display = 'inline-block';
+            if (profileBtn) profileBtn.style.display = 'inline-block';
+        } else {
+            if (loginBtn) loginBtn.style.display = 'inline-block';
+            if (logoutBtn) logoutBtn.style.display = 'none';
+            if (profileBtn) profileBtn.style.display = 'none';
+        }
+    }
+};
 
 // Format date helpers
 function formatDate(dateString) {
@@ -22,39 +58,52 @@ function formatTime(dateString) {
     });
 }
 
+// Toast notifications
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+// HTML escaping helper
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // Error handling
 function handleError(error) {
     console.error('Error:', error);
     const message = error.message || 'An error occurred';
-
-    // Show error to user
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'error-toast';
-    errorDiv.textContent = message;
-    document.body.appendChild(errorDiv);
-
-    setTimeout(() => {
-        errorDiv.remove();
-    }, 5000);
+    showToast(message, 'error');
 }
 
 // Success message
 function showSuccess(message) {
-    const successDiv = document.createElement('div');
-    successDiv.className = 'success-toast';
-    successDiv.textContent = message;
-    document.body.appendChild(successDiv);
-
-    setTimeout(() => {
-        successDiv.remove();
-    }, 3000);
+    showToast(message, 'success');
 }
+
+// Make globally available
+window.auth = auth;
+window.showToast = showToast;
+window.escapeHtml = escapeHtml;
+window.handleError = handleError;
+window.showSuccess = showSuccess;
 
 // Export for use in other scripts
 window.app = {
-    checkAuth,
+    auth,
     formatDate,
     formatTime,
     handleError,
-    showSuccess
+    showSuccess,
+    showToast,
+    escapeHtml
 };

@@ -42,9 +42,13 @@ const api = {
             method: 'POST',
             body: JSON.stringify({ email, password })
         });
-        if (data.token) {
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
+        // Backend returns access_token and refresh_token
+        if (data.access_token) {
+            localStorage.setItem('token', data.access_token);
+            localStorage.setItem('refresh_token', data.refresh_token);
+            if (data.user) {
+                localStorage.setItem('user', JSON.stringify(data.user));
+            }
         }
         return data;
     },
@@ -54,6 +58,14 @@ const api = {
             method: 'POST',
             body: JSON.stringify(userData)
         });
+        // Backend returns access_token and refresh_token
+        if (data.access_token) {
+            localStorage.setItem('token', data.access_token);
+            localStorage.setItem('refresh_token', data.refresh_token);
+            if (data.user) {
+                localStorage.setItem('user', JSON.stringify(data.user));
+            }
+        }
         return data;
     },
 
