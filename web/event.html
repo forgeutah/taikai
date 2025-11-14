@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Details - Taikai</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1><a href="/">🎯 Taikai</a></h1>
+            </div>
+            <div class="nav-menu">
+                <a href="/">Events</a>
+                <a href="/subscriptions.html">Subscriptions</a>
+                <a href="/admin.html">Admin</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div id="eventDetails">
+            <div class="loading">Loading event...</div>
+        </div>
+    </main>
+
+    <script src="/js/api.js"></script>
+    <script>
+        const eventId = new URLSearchParams(window.location.search).get('id');
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!eventId) {
+                window.location.href = '/';
+                return;
+            }
+
+            try {
+                const [event, speakers, sponsors, schedule, rsvps] = await Promise.all([
+                    api.getEvent(eventId),
+                    api.getEventSpeakers(eventId),
+                    api.getEventSponsors(eventId),
+                    api.getEventSchedule(eventId),
+                    api.getEventRSVPs(eventId)
+                ]);
+
+                displayEvent(event, speakers, sponsors, schedule, rsvps);
+            } catch (error) {
+                console.error('Error loading event:', error);
+                document.getElementById('eventDetails').innerHTML =
+                    '<p class="error">Failed to load event details</p>';
+            }
+        });
+
+        function displayEvent(event, speakers, sponsors, schedule, rsvps) {
+            const container = document.getElementById('eventDetails');
+            const token = localStorage.getItem('token');
+            const userRsvpStatus = event.user_rsvp_status;
+
+            container.innerHTML = `
+                <div class="event-header">
+                    <div class="event-info">
+                        <h1>${event.title}</h1>
+                        <p class="event-description">${event.description || ''}</p>
+
+                        <div class="event-meta">
+                            <div class="meta-item">
+                                <strong>📅 Date:</strong>
+                                ${new Date(event.start_time).toLocaleDateString('en-US', {
+                                    weekday: 'long',
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                })}
+                            </div>
+                            <div class="meta-item">
+                                <strong>⏰ Time:</strong>
+                                ${new Date(event.start_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                                - ${new Date(event.end_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                            </div>
+                            ${event.capacity ? `
+                                <div class="meta-item">
+                                    <strong>👥 Capacity:</strong>
+                                    ${rsvps.count || 0}/${event.capacity}
+                                </div>
+                            ` : ''}
+                            ${event.youtube_url ? `
+                                <div class="meta-item">
+                                    <strong>🎥 Stream:</strong>
+                                    <a href="${event.youtube_url}" target="_blank">Watch Live</a>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <div class="event-actions">
+                        ${token ? `
+                            <div class="rsvp-section">
+                                ${userRsvpStatus === 'attending' ? `
+                                    <button class="btn btn-success" disabled>✓ You're attending</button>
+                                    <button class="btn btn-secondary" onclick="updateRSVP('not_attending')">Cancel RSVP</button>
+                                ` : userRsvpStatus === 'not_attending' ? `
+                                    <button class="btn btn-primary" onclick="updateRSVP('attending')">RSVP</button>
+                                    <p class="text-muted">You marked as not attending</p>
+                                ` : `
+                                    <button class="btn btn-primary btn-lg" onclick="updateRSVP('attending')">RSVP to Event</button>
+                                `}
+                            </div>
+                        ` : `
+                            <a href="/login.html" class="btn btn-primary btn-lg">Login to RSVP</a>
+                        `}
+                    </div>
+                </div>
+
+                ${speakers.length > 0 ? `
+                    <section class="event-section">
+                        <h2>🎤 Speakers</h2>
+                        <div class="speakers-grid">
+                            ${speakers.map(speaker => `
+                                <div class="speaker-card">
+                                    ${speaker.avatar_url ? `
+                                        <img src="${speaker.avatar_url}" alt="${speaker.name}">
+                                    ` : `
+                                        <div class="avatar-placeholder">${speaker.name.charAt(0)}</div>
+                                    `}
+                                    <h3>${speaker.name}</h3>
+                                    ${speaker.bio ? `<p>${speaker.bio}</p>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </section>
+                ` : ''}
+
+                ${sponsors.length > 0 ? `
+                    <section class="event-section">
+                        <h2>💼 Sponsors</h2>
+                        <div class="sponsors-grid">
+                            ${sponsors.map(sponsor => `
+                                <div class="sponsor-card">
+                                    ${sponsor.logo_url ? `
+                                        <img src="${sponsor.logo_url}" alt="${sponsor.company_name}" class="sponsor-logo">
+                                    ` : ''}
+                                    <h3>${sponsor.company_name}</h3>
+                                    ${sponsor.description ? `<p>${sponsor.description}</p>` : ''}
+                                    <div class="sponsor-contact">
+                                        <a href="mailto:${sponsor.email}">📧 ${sponsor.email}</a>
+                                        ${sponsor.website ? `
+                                            <a href="${sponsor.website}" target="_blank">🌐 Website</a>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </section>
+                ` : ''}
+
+                ${schedule.length > 0 ? `
+                    <section class="event-section">
+                        <h2>📋 Schedule</h2>
+                        <div class="schedule-list">
+                            ${schedule.map(item => {
+                                const itemTime = new Date(new Date(event.start_time).getTime() + item.time_offset_minutes * 60000);
+                                return `
+                                    <div class="schedule-item">
+                                        <div class="schedule-time">
+                                            ${itemTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                                        </div>
+                                        <div class="schedule-content">
+                                            <h4>${item.title}</h4>
+                                            ${item.description ? `<p>${item.description}</p>` : ''}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </section>
+                ` : ''}
+            `;
+        }
+
+        async function updateRSVP(status) {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            try {
+                if (status === 'not_attending' || status === 'attending') {
+                    await api.createOrUpdateRSVP(eventId, status);
+                    window.location.reload();
+                }
+            } catch (error) {
+                alert(error.message || 'Failed to update RSVP');
+            }
+        }
+    </script>
+</body>
+</html>

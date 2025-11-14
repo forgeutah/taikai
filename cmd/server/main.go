@@ -104,6 +104,24 @@ func main() {
 	fileServer := http.FileServer(http.Dir(uploadDir))
 	r.Handle("/uploads/*", http.StripPrefix("/uploads/", fileServer))
 
+	// Serve web UI static files
+	webDir := "./web"
+	webFileServer := http.FileServer(http.Dir(webDir))
+	r.Handle("/css/*", webFileServer)
+	r.Handle("/js/*", webFileServer)
+	r.Get("/index.html", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, webDir+"/index.html")
+	})
+	r.Get("/event.html", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, webDir+"/event.html")
+	})
+	r.Get("/admin.html", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, webDir+"/admin.html")
+	})
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, webDir+"/index.html")
+	})
+
 	// Health check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

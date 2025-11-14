@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Taikai</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1><a href="/">🎯 Taikai</a></h1>
+            </div>
+            <div class="nav-menu">
+                <a href="/">Events</a>
+                <a href="/subscriptions.html">Subscriptions</a>
+                <a href="/admin.html" class="active">Admin</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="admin-layout">
+            <aside class="admin-sidebar">
+                <h3>Manage</h3>
+                <ul class="admin-menu">
+                    <li><a href="#events" onclick="showTab('events')">Events</a></li>
+                    <li><a href="#speakers" onclick="showTab('speakers')">Speakers</a></li>
+                    <li><a href="#sponsors" onclick="showTab('sponsors')">Sponsors</a></li>
+                    <li><a href="#schedule" onclick="showTab('schedule')">Schedule</a></li>
+                </ul>
+            </aside>
+
+            <div class="admin-content">
+                <!-- Events Tab -->
+                <div id="eventsTab" class="admin-tab">
+                    <div class="tab-header">
+                        <h2>Manage Events</h2>
+                        <button class="btn btn-primary" onclick="showCreateEventModal()">+ Create Event</button>
+                    </div>
+
+                    <div id="eventsList">
+                        <div class="loading">Loading events...</div>
+                    </div>
+                </div>
+
+                <!-- Speakers Tab -->
+                <div id="speakersTab" class="admin-tab hidden">
+                    <div class="tab-header">
+                        <h2>Manage Speakers</h2>
+                        <select id="eventSelectSpeakers" onchange="loadSpeakers()">
+                            <option value="">Select an event</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="showAddSpeakerModal()">+ Add Speaker</button>
+                    </div>
+
+                    <div id="speakersList">
+                        <p class="text-muted">Select an event to manage speakers</p>
+                    </div>
+                </div>
+
+                <!-- Sponsors Tab -->
+                <div id="sponsorsTab" class="admin-tab hidden">
+                    <div class="tab-header">
+                        <h2>Manage Sponsors</h2>
+                        <select id="eventSelectSponsors" onchange="loadSponsors()">
+                            <option value="">Select an event</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="showAddSponsorModal()">+ Add Sponsor</button>
+                    </div>
+
+                    <div id="sponsorsList">
+                        <p class="text-muted">Select an event to manage sponsors</p>
+                    </div>
+                </div>
+
+                <!-- Schedule Tab -->
+                <div id="scheduleTab" class="admin-tab hidden">
+                    <div class="tab-header">
+                        <h2>Manage Schedule</h2>
+                        <select id="eventSelectSchedule" onchange="loadSchedule()">
+                            <option value="">Select an event</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="showAddScheduleModal()">+ Add Schedule Item</button>
+                    </div>
+
+                    <div id="scheduleList">
+                        <p class="text-muted">Select an event to manage schedule</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Sponsor Modal -->
+    <div id="sponsorModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Add Sponsor</h2>
+            <form id="sponsorForm" onsubmit="handleSponsorSubmit(event)">
+                <div class="form-group">
+                    <label>Company Name *</label>
+                    <input type="text" name="company_name" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Website</label>
+                    <input type="url" name="website">
+                </div>
+
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Logo</label>
+                    <div class="image-upload-area" id="logoUploadArea">
+                        <input type="file" id="logoInput" accept="image/*" style="display: none;" onchange="handleLogoUpload(event)">
+                        <div class="upload-placeholder" onclick="document.getElementById('logoInput').click()">
+                            <p>📤 Drag and drop logo here or click to upload</p>
+                            <p class="text-muted">JPEG, PNG, GIF, WebP (max 5MB)</p>
+                        </div>
+                        <div id="logoPreview" class="hidden">
+                            <img id="logoPreviewImg" src="" alt="Logo preview">
+                            <button type="button" onclick="removeLogo()">Remove</button>
+                        </div>
+                    </div>
+                    <input type="hidden" name="logo_url" id="logoUrl">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('sponsorModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Sponsor</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        let currentEventId = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            loadAdminEvents();
+            populateEventSelects();
+            setupDragAndDrop();
+        });
+
+        async function loadAdminEvents() {
+            try {
+                const events = await api.getEvents();
+                displayAdminEvents(events);
+            } catch (error) {
+                document.getElementById('eventsList').innerHTML =
+                    '<p class="error">Failed to load events</p>';
+            }
+        }
+
+        function displayAdminEvents(events) {
+            const container = document.getElementById('eventsList');
+            container.innerHTML = events.map(event => `
+                <div class="admin-event-card">
+                    <div>
+                        <h3>${event.title}</h3>
+                        <p>${new Date(event.start_time).toLocaleDateString()}</p>
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn btn-sm" onclick="window.location.href='/event.html?id=${event.id}'">View</button>
+                        <button class="btn btn-sm btn-secondary" onclick="editEvent('${event.id}')">Edit</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function populateEventSelects() {
+            const events = await api.getEvents();
+            ['eventSelectSpeakers', 'eventSelectSponsors', 'eventSelectSchedule'].forEach(selectId => {
+                const select = document.getElementById(selectId);
+                select.innerHTML = '<option value="">Select an event</option>';
+                events.forEach(event => {
+                    const option = document.createElement('option');
+                    option.value = event.id;
+                    option.textContent = event.title;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        async function loadSponsors() {
+            const eventId = document.getElementById('eventSelectSponsors').value;
+            if (!eventId) return;
+
+            currentEventId = eventId;
+            const sponsors = await api.getEventSponsors(eventId);
+            const container = document.getElementById('sponsorsList');
+
+            if (!sponsors || sponsors.length === 0) {
+                container.innerHTML = '<p class="text-muted">No sponsors yet</p>';
+                return;
+            }
+
+            container.innerHTML = sponsors.map(sponsor => `
+                <div class="admin-card">
+                    ${sponsor.logo_url ? `<img src="${sponsor.logo_url}" class="sponsor-logo-small" alt="${sponsor.company_name}">` : ''}
+                    <div class="card-content">
+                        <h4>${sponsor.company_name}</h4>
+                        <p>📧 ${sponsor.email}</p>
+                        ${sponsor.website ? `<p>🌐 <a href="${sponsor.website}" target="_blank">${sponsor.website}</a></p>` : ''}
+                    </div>
+                    <div class="card-actions">
+                        <button class="btn btn-sm btn-danger" onclick="deleteSponsor('${sponsor.id}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function setupDragAndDrop() {
+            const uploadArea = document.getElementById('logoUploadArea');
+            if (!uploadArea) return;
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, () => {
+                    uploadArea.classList.add('drag-over');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, () => {
+                    uploadArea.classList.remove('drag-over');
+                }, false);
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleLogoFile(files[0]);
+                }
+            }, false);
+        }
+
+        async function handleLogoUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                await handleLogoFile(file);
+            }
+        }
+
+        async function handleLogoFile(file) {
+            // Validate file size
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File too large. Maximum size is 5MB.');
+                return;
+            }
+
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please upload an image file.');
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('image', file);
+
+                const result = await api.uploadImage(formData);
+
+                // Show preview
+                document.querySelector('.upload-placeholder').classList.add('hidden');
+                document.getElementById('logoPreview').classList.remove('hidden');
+                document.getElementById('logoPreviewImg').src = result.url;
+                document.getElementById('logoUrl').value = result.url;
+            } catch (error) {
+                alert('Failed to upload image: ' + error.message);
+            }
+        }
+
+        function removeLogo() {
+            document.querySelector('.upload-placeholder').classList.remove('hidden');
+            document.getElementById('logoPreview').classList.add('hidden');
+            document.getElementById('logoPreviewImg').src = '';
+            document.getElementById('logoUrl').value = '';
+            document.getElementById('logoInput').value = '';
+        }
+
+        async function handleSponsorSubmit(event) {
+            event.preventDefault();
+
+            if (!currentEventId) {
+                alert('Please select an event first');
+                return;
+            }
+
+            const formData = new FormData(event.target);
+            const data = {
+                company_name: formData.get('company_name'),
+                email: formData.get('email'),
+                website: formData.get('website') || null,
+                description: formData.get('description') || null,
+                logo_url: formData.get('logo_url') || null,
+                display_order: 0
+            };
+
+            try {
+                await api.createEventSponsor(currentEventId, data);
+                closeModal('sponsorModal');
+                loadSponsors();
+                event.target.reset();
+                removeLogo();
+            } catch (error) {
+                alert('Failed to add sponsor: ' + error.message);
+            }
+        }
+
+        async function deleteSponsor(sponsorId) {
+            if (!confirm('Delete this sponsor?')) return;
+
+            try {
+                await api.deleteEventSponsor(currentEventId, sponsorId);
+                loadSponsors();
+            } catch (error) {
+                alert('Failed to delete sponsor');
+            }
+        }
+
+        function showTab(tabName) {
+            document.querySelectorAll('.admin-tab').forEach(tab => tab.classList.add('hidden'));
+            document.getElementById(tabName + 'Tab').classList.remove('hidden');
+        }
+
+        function showAddSponsorModal() {
+            if (!currentEventId) {
+                alert('Please select an event first');
+                return;
+            }
+            document.getElementById('sponsorModal').classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

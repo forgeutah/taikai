@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taikai - Event Management</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1>🎯 Taikai</h1>
+            </div>
+            <div class="nav-menu">
+                <a href="/">Events</a>
+                <a href="/subscriptions.html">Subscriptions</a>
+                <a href="/admin.html">Admin</a>
+                <button id="loginBtn" class="btn btn-primary">Login</button>
+                <div id="userMenu" class="user-menu hidden">
+                    <span id="userName"></span>
+                    <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <section class="hero">
+            <h1>Discover Amazing Events</h1>
+            <p>Join meetups, conferences, and workshops in your community</p>
+
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Search events...">
+                <button class="btn btn-primary" onclick="searchEvents()">Search</button>
+            </div>
+        </section>
+
+        <section class="filters">
+            <select id="organizationFilter" onchange="filterEvents()">
+                <option value="">All Organizations</option>
+            </select>
+            <select id="groupFilter" onchange="filterEvents()">
+                <option value="">All Groups</option>
+            </select>
+        </section>
+
+        <section id="eventsList" class="events-grid">
+            <!-- Events will be loaded here -->
+            <div class="loading">Loading events...</div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Taikai. Built for communities.</p>
+        </div>
+    </footer>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/app.js"></script>
+    <script>
+        // Load events on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadEvents();
+            loadOrganizations();
+            loadGroups();
+            checkAuth();
+        });
+
+        async function loadEvents() {
+            try {
+                const events = await api.getEvents();
+                displayEvents(events);
+            } catch (error) {
+                document.getElementById('eventsList').innerHTML =
+                    '<p class="error">Failed to load events</p>';
+            }
+        }
+
+        async function loadOrganizations() {
+            const orgs = await api.getOrganizations();
+            const select = document.getElementById('organizationFilter');
+            orgs.forEach(org => {
+                const option = document.createElement('option');
+                option.value = org.id;
+                option.textContent = org.name;
+                select.appendChild(option);
+            });
+        }
+
+        async function loadGroups() {
+            const groups = await api.getGroups();
+            const select = document.getElementById('groupFilter');
+            groups.forEach(group => {
+                const option = document.createElement('option');
+                option.value = group.id;
+                option.textContent = group.name;
+                select.appendChild(option);
+            });
+        }
+
+        function displayEvents(events) {
+            const container = document.getElementById('eventsList');
+
+            if (!events || events.length === 0) {
+                container.innerHTML = '<p class="no-events">No events found</p>';
+                return;
+            }
+
+            container.innerHTML = events.map(event => `
+                <div class="event-card" onclick="window.location.href='/event.html?id=${event.id}'">
+                    <div class="event-date">
+                        <div class="month">${new Date(event.start_time).toLocaleDateString('en-US', {month: 'short'})}</div>
+                        <div class="day">${new Date(event.start_time).getDate()}</div>
+                    </div>
+                    <div class="event-details">
+                        <h3>${event.title}</h3>
+                        <p class="event-description">${event.description || ''}</p>
+                        <div class="event-meta">
+                            <span>📅 ${new Date(event.start_time).toLocaleDateString()}</span>
+                            <span>⏰ ${new Date(event.start_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span>
+                            ${event.rsvp_count ? `<span>👥 ${event.rsvp_count} attending</span>` : ''}
+                        </div>
+                        ${event.capacity ? `<div class="event-capacity">Capacity: ${event.rsvp_count || 0}/${event.capacity}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function searchEvents() {
+            const query = document.getElementById('searchInput').value;
+            const events = await api.getEvents({ search: query });
+            displayEvents(events);
+        }
+
+        async function filterEvents() {
+            const orgId = document.getElementById('organizationFilter').value;
+            const groupId = document.getElementById('groupFilter').value;
+
+            const params = {};
+            if (orgId) params.organization_id = orgId;
+            if (groupId) params.group_id = groupId;
+
+            const events = await api.getEvents(params);
+            displayEvents(events);
+        }
+
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+            if (token && user.email) {
+                document.getElementById('loginBtn').classList.add('hidden');
+                document.getElementById('userMenu').classList.remove('hidden');
+                document.getElementById('userName').textContent = user.email;
+            }
+        }
+
+        document.getElementById('loginBtn')?.addEventListener('click', () => {
+            window.location.href = '/login.html';
+        });
+
+        document.getElementById('logoutBtn')?.addEventListener('click', () => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.reload();
+        });
+    </script>
+</body>
+</html>
