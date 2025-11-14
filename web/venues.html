@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Venues - Taikai</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <a href="/">Taikai</a>
+            </div>
+            <div class="navbar-menu">
+                <a href="/organizations.html">Organizations</a>
+                <a href="/events.html">Events</a>
+                <a href="/venues.html" class="active">Venues</a>
+                <div id="authButtons">
+                    <a href="/profile.html" class="btn btn-sm" id="profileBtn" style="display:none;">Profile</a>
+                    <button onclick="auth.logout()" class="btn btn-sm btn-secondary" id="logoutBtn" style="display:none;">Logout</button>
+                    <a href="/login.html" class="btn btn-sm btn-primary" id="loginBtn">Login</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container main-content">
+        <div class="page-header">
+            <div>
+                <h1>Venues</h1>
+                <p class="text-muted">Event locations and spaces</p>
+            </div>
+            <button onclick="showCreateVenueModal()" class="btn btn-primary" id="createVenueBtn" style="display:none;">
+                Add Venue
+            </button>
+        </div>
+
+        <div class="search-filters">
+            <input type="text" id="searchInput" placeholder="Search venues..." class="search-input">
+        </div>
+
+        <div id="venuesGrid" class="venues-grid">
+            <div class="loading">Loading venues...</div>
+        </div>
+    </main>
+
+    <!-- Create/Edit Venue Modal -->
+    <div id="venueModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="venueModalTitle">Add Venue</h2>
+                <span class="close" onclick="closeVenueModal()">&times;</span>
+            </div>
+            <form id="venueForm" onsubmit="saveVenue(event)">
+                <div class="form-group">
+                    <label for="venueName">Venue Name *</label>
+                    <input type="text" id="venueName" required>
+                </div>
+                <div class="form-group">
+                    <label for="venueAddress">Street Address *</label>
+                    <input type="text" id="venueAddress" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="venueCity">City *</label>
+                        <input type="text" id="venueCity" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="venueState">State/Province *</label>
+                        <input type="text" id="venueState" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="venueZip">ZIP/Postal Code *</label>
+                        <input type="text" id="venueZip" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="venueCountry">Country *</label>
+                        <input type="text" id="venueCountry" value="USA" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="venueDirections">Directions/Parking Info</label>
+                    <textarea id="venueDirections" rows="3"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" onclick="closeVenueModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/app.js"></script>
+    <script>
+        let currentVenueId = null;
+        let allVenues = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            auth.updateUI();
+            loadVenues();
+
+            if (auth.isAuthenticated()) {
+                document.getElementById('createVenueBtn').style.display = 'block';
+            }
+
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const filtered = allVenues.filter(venue =>
+                    venue.name.toLowerCase().includes(query) ||
+                    venue.city.toLowerCase().includes(query) ||
+                    venue.state.toLowerCase().includes(query)
+                );
+                displayVenues(filtered);
+            });
+        });
+
+        async function loadVenues() {
+            try {
+                allVenues = await api.getVenues();
+                displayVenues(allVenues);
+            } catch (error) {
+                console.error('Error loading venues:', error);
+                document.getElementById('venuesGrid').innerHTML =
+                    '<div class="error">Failed to load venues</div>';
+            }
+        }
+
+        function displayVenues(venues) {
+            const container = document.getElementById('venuesGrid');
+
+            if (venues.length === 0) {
+                container.innerHTML = '<div class="empty-state">No venues found</div>';
+                return;
+            }
+
+            container.innerHTML = venues.map(venue => `
+                <div class="venue-card">
+                    <h3>${escapeHtml(venue.name)}</h3>
+                    <div class="venue-address">
+                        <p>📍 ${escapeHtml(venue.address)}</p>
+                        <p>${escapeHtml(venue.city)}, ${escapeHtml(venue.state)} ${escapeHtml(venue.zip_code)}</p>
+                        ${venue.country !== 'USA' ? `<p>${escapeHtml(venue.country)}</p>` : ''}
+                    </div>
+                    ${venue.directions ? `
+                        <div class="venue-directions">
+                            <p class="text-muted"><small>${escapeHtml(venue.directions)}</small></p>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        function showCreateVenueModal() {
+            if (!auth.isAuthenticated()) {
+                window.location.href = '/login.html';
+                return;
+            }
+            currentVenueId = null;
+            document.getElementById('venueModalTitle').textContent = 'Add Venue';
+            document.getElementById('venueForm').reset();
+            document.getElementById('venueModal').style.display = 'block';
+        }
+
+        function closeVenueModal() {
+            document.getElementById('venueModal').style.display = 'none';
+        }
+
+        async function saveVenue(event) {
+            event.preventDefault();
+
+            const venueData = {
+                name: document.getElementById('venueName').value,
+                address: document.getElementById('venueAddress').value,
+                city: document.getElementById('venueCity').value,
+                state: document.getElementById('venueState').value,
+                zip_code: document.getElementById('venueZip').value,
+                country: document.getElementById('venueCountry').value,
+                directions: document.getElementById('venueDirections').value || null
+            };
+
+            try {
+                if (currentVenueId) {
+                    await api.updateVenue(currentVenueId, venueData);
+                    showToast('Venue updated successfully');
+                } else {
+                    await api.createVenue(venueData);
+                    showToast('Venue created successfully');
+                }
+                closeVenueModal();
+                loadVenues();
+            } catch (error) {
+                console.error('Error saving venue:', error);
+                showToast(error.message || 'Failed to save venue', 'error');
+            }
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('venueModal');
+            if (event.target === modal) {
+                closeVenueModal();
+            }
+        }
+    </script>
+</body>
+</html>

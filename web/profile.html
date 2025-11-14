@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Taikai</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <a href="/">Taikai</a>
+            </div>
+            <div class="navbar-menu">
+                <a href="/organizations.html">Organizations</a>
+                <a href="/events.html">Events</a>
+                <a href="/venues.html">Venues</a>
+                <div id="authButtons">
+                    <a href="/profile.html" class="btn btn-sm active">Profile</a>
+                    <button onclick="auth.logout()" class="btn btn-sm btn-secondary">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container main-content">
+        <div class="page-header">
+            <h1>My Profile</h1>
+        </div>
+
+        <div class="profile-layout">
+            <div class="profile-sidebar">
+                <div class="profile-nav">
+                    <button class="profile-nav-item active" onclick="switchProfileTab('rsvps')">My RSVPs</button>
+                    <button class="profile-nav-item" onclick="switchProfileTab('subscriptions')">Subscriptions</button>
+                    <button class="profile-nav-item" onclick="switchProfileTab('settings')">Settings</button>
+                </div>
+            </div>
+
+            <div class="profile-content">
+                <!-- RSVPs Tab -->
+                <div id="rsvpsTab" class="profile-tab">
+                    <h2>My RSVPs</h2>
+                    <div id="rsvpsList">
+                        <div class="loading">Loading your RSVPs...</div>
+                    </div>
+                </div>
+
+                <!-- Subscriptions Tab -->
+                <div id="subscriptionsTab" class="profile-tab" style="display:none;">
+                    <h2>My Subscriptions</h2>
+                    <p class="text-muted">Manage your event notifications</p>
+                    <div id="subscriptionsList">
+                        <div class="loading">Loading your subscriptions...</div>
+                    </div>
+                </div>
+
+                <!-- Settings Tab -->
+                <div id="settingsTab" class="profile-tab" style="display:none;">
+                    <h2>Account Settings</h2>
+                    <div id="userInfo">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/app.js"></script>
+    <script>
+        // Redirect if not logged in
+        if (!auth.isAuthenticated()) {
+            window.location.href = '/login.html';
+        }
+
+        let rsvps = [];
+        let subscriptions = [];
+        let user = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProfile();
+        });
+
+        async function loadProfile() {
+            try {
+                [rsvps, subscriptions, user] = await Promise.all([
+                    api.getMyRSVPs(),
+                    api.getMySubscriptions(),
+                    api.getMe()
+                ]);
+
+                displayRSVPs();
+                displaySubscriptions();
+                displaySettings();
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                if (error.message.includes('401') || error.message.includes('403')) {
+                    auth.logout();
+                }
+            }
+        }
+
+        function switchProfileTab(tab) {
+            // Hide all tabs
+            document.querySelectorAll('.profile-tab').forEach(t => t.style.display = 'none');
+            document.querySelectorAll('.profile-nav-item').forEach(btn => btn.classList.remove('active'));
+
+            // Show selected tab
+            if (tab === 'rsvps') {
+                document.getElementById('rsvpsTab').style.display = 'block';
+                document.querySelectorAll('.profile-nav-item')[0].classList.add('active');
+            } else if (tab === 'subscriptions') {
+                document.getElementById('subscriptionsTab').style.display = 'block';
+                document.querySelectorAll('.profile-nav-item')[1].classList.add('active');
+            } else if (tab === 'settings') {
+                document.getElementById('settingsTab').style.display = 'block';
+                document.querySelectorAll('.profile-nav-item')[2].classList.add('active');
+            }
+        }
+
+        async function displayRSVPs() {
+            const container = document.getElementById('rsvpsList');
+
+            if (rsvps.length === 0) {
+                container.innerHTML = '<div class="empty-state">You haven\'t RSVP\'d to any events yet</div>';
+                return;
+            }
+
+            // Separate upcoming and past
+            const now = new Date();
+            const upcoming = rsvps.filter(r => new Date(r.event.start_time) >= now);
+            const past = rsvps.filter(r => new Date(r.event.start_time) < now);
+
+            container.innerHTML = `
+                ${upcoming.length > 0 ? `
+                    <h3>Upcoming Events (${upcoming.length})</h3>
+                    <div class="rsvp-list">
+                        ${upcoming.map(rsvp => renderRSVPItem(rsvp)).join('')}
+                    </div>
+                ` : ''}
+
+                ${past.length > 0 ? `
+                    <h3>Past Events (${past.length})</h3>
+                    <div class="rsvp-list">
+                        ${past.map(rsvp => renderRSVPItem(rsvp)).join('')}
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        function renderRSVPItem(rsvp) {
+            const event = rsvp.event;
+            const startDate = new Date(event.start_time);
+
+            return `
+                <div class="rsvp-item" onclick="window.location.href='/event.html?id=${event.id}'">
+                    <div class="rsvp-date">
+                        <div class="rsvp-month">${startDate.toLocaleDateString('en-US', { month: 'short' })}</div>
+                        <div class="rsvp-day">${startDate.getDate()}</div>
+                    </div>
+                    <div class="rsvp-details">
+                        <h4>${escapeHtml(event.title)}</h4>
+                        <p class="text-muted">
+                            ${startDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} at
+                            ${startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                        </p>
+                        <span class="badge badge-${rsvp.response}">${rsvp.response}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function displaySubscriptions() {
+            const container = document.getElementById('subscriptionsList');
+
+            if (!subscriptions || (subscriptions.org_subscriptions?.length === 0 && subscriptions.group_subscriptions?.length === 0)) {
+                container.innerHTML = '<div class="empty-state">You\'re not subscribed to any organizations or groups</div>';
+                return;
+            }
+
+            container.innerHTML = `
+                ${subscriptions.org_subscriptions?.length > 0 ? `
+                    <h3>Organization Subscriptions</h3>
+                    <div class="subscription-list">
+                        ${subscriptions.org_subscriptions.map(sub => `
+                            <div class="subscription-item">
+                                <div>
+                                    <h4>${escapeHtml(sub.organization_name)}</h4>
+                                    <p class="text-muted">
+                                        ${sub.email ? '✓ Email' : ''} ${sub.sms ? '✓ SMS' : ''} ${sub.discord ? '✓ Discord' : ''}
+                                    </p>
+                                </div>
+                                <button onclick="unsubscribeOrg('${sub.organization_id}')" class="btn btn-sm btn-secondary">
+                                    Unsubscribe
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+
+                ${subscriptions.group_subscriptions?.length > 0 ? `
+                    <h3>Group Subscriptions</h3>
+                    <div class="subscription-list">
+                        ${subscriptions.group_subscriptions.map(sub => `
+                            <div class="subscription-item">
+                                <div>
+                                    <h4>${escapeHtml(sub.group_name)}</h4>
+                                    <p class="text-muted">
+                                        ${sub.email ? '✓ Email' : ''} ${sub.sms ? '✓ SMS' : ''} ${sub.discord ? '✓ Discord' : ''}
+                                    </p>
+                                </div>
+                                <button onclick="unsubscribeGroup('${sub.group_id}')" class="btn btn-sm btn-secondary">
+                                    Unsubscribe
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        function displaySettings() {
+            const container = document.getElementById('userInfo');
+
+            if (!user) {
+                container.innerHTML = '<div class="error">Failed to load user information</div>';
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="settings-section">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <p class="form-value">${escapeHtml(user.full_name)}</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <p class="form-value">${escapeHtml(user.email)}</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Member Since</label>
+                        <p class="form-value">${new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function unsubscribeOrg(orgId) {
+            try {
+                await api.unsubscribeFromOrganization(orgId);
+                showToast('Unsubscribed successfully');
+                loadProfile();
+            } catch (error) {
+                console.error('Error unsubscribing:', error);
+                showToast('Failed to unsubscribe', 'error');
+            }
+        }
+
+        async function unsubscribeGroup(groupId) {
+            try {
+                await api.unsubscribeFromGroup(groupId);
+                showToast('Unsubscribed successfully');
+                loadProfile();
+            } catch (error) {
+                console.error('Error unsubscribing:', error);
+                showToast('Failed to unsubscribe', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

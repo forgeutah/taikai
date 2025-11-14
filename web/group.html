@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group - Taikai</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <a href="/">Taikai</a>
+            </div>
+            <div class="navbar-menu">
+                <a href="/organizations.html">Organizations</a>
+                <a href="/events.html">Events</a>
+                <a href="/venues.html">Venues</a>
+                <div id="authButtons">
+                    <a href="/profile.html" class="btn btn-sm" id="profileBtn" style="display:none;">Profile</a>
+                    <button onclick="auth.logout()" class="btn btn-sm btn-secondary" id="logoutBtn" style="display:none;">Logout</button>
+                    <a href="/login.html" class="btn btn-sm btn-primary" id="loginBtn">Login</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container main-content">
+        <div id="groupContent">
+            <div class="loading">Loading group...</div>
+        </div>
+    </main>
+
+    <!-- Create Event Modal -->
+    <div id="eventModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>Create Event</h2>
+                <span class="close" onclick="closeEventModal()">&times;</span>
+            </div>
+            <form id="eventForm" onsubmit="saveEvent(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="eventTitle">Event Title *</label>
+                        <input type="text" id="eventTitle" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventSlug">URL Slug *</label>
+                        <input type="text" id="eventSlug" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="eventDescription">Description</label>
+                    <textarea id="eventDescription" rows="4"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="eventStartTime">Start Time *</label>
+                        <input type="datetime-local" id="eventStartTime" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventEndTime">End Time *</label>
+                        <input type="datetime-local" id="eventEndTime" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="eventTimezone">Timezone *</label>
+                        <input type="text" id="eventTimezone" value="America/Denver" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventCapacity">Capacity (optional)</label>
+                        <input type="number" id="eventCapacity" min="1">
+                        <small class="text-muted">Leave empty for unlimited</small>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="eventVenue">Venue *</label>
+                    <select id="eventVenue" required>
+                        <option value="">Select a venue...</option>
+                    </select>
+                    <small class="text-muted">
+                        <a href="/venues.html" target="_blank">Create a new venue</a>
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="eventType">Event Type</label>
+                    <select id="eventType">
+                        <option value="in_person">In Person</option>
+                        <option value="virtual">Virtual</option>
+                        <option value="hybrid">Hybrid</option>
+                    </select>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" onclick="closeEventModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Event</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/app.js"></script>
+    <script>
+        let group = null;
+        let organization = null;
+        let events = [];
+        let venues = [];
+        const groupId = new URLSearchParams(window.location.search).get('id');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            auth.updateUI();
+            if (!groupId) {
+                window.location.href = '/organizations.html';
+                return;
+            }
+            loadGroup();
+            loadVenues();
+        });
+
+        async function loadGroup() {
+            try {
+                group = await api.getGroup(groupId);
+                organization = await api.getOrganization(group.organization_id);
+                events = await api.getEvents({ group_id: groupId });
+                displayGroup();
+            } catch (error) {
+                console.error('Error loading group:', error);
+                document.getElementById('groupContent').innerHTML =
+                    '<div class="error">Failed to load group</div>';
+            }
+        }
+
+        async function loadVenues() {
+            try {
+                venues = await api.getVenues();
+                populateVenueSelect();
+            } catch (error) {
+                console.error('Error loading venues:', error);
+            }
+        }
+
+        function populateVenueSelect() {
+            const select = document.getElementById('eventVenue');
+            select.innerHTML = '<option value="">Select a venue...</option>' +
+                venues.map(v => `<option value="${v.id}">${escapeHtml(v.name)} - ${escapeHtml(v.city)}</option>`).join('');
+        }
+
+        function displayGroup() {
+            const communityChat = group.community_chat_url || organization.community_chat_url;
+            const upcomingEvents = events.filter(e => new Date(e.start_time) >= new Date());
+            const pastEvents = events.filter(e => new Date(e.start_time) < new Date());
+
+            const content = `
+                <div class="detail-header">
+                    <div>
+                        <div class="breadcrumb">
+                            <a href="/organizations.html">Organizations</a> /
+                            <a href="/organization.html?id=${organization.id}">${escapeHtml(organization.name)}</a> /
+                            ${escapeHtml(group.name)}
+                        </div>
+                        <h1>${escapeHtml(group.name)}</h1>
+                        ${group.description ? `<p class="lead">${escapeHtml(group.description)}</p>` : ''}
+                        <div class="detail-meta">
+                            ${communityChat ? `<a href="${escapeHtml(communityChat)}" target="_blank" class="meta-link">💬 Join Community Chat</a>` : ''}
+                        </div>
+                    </div>
+                    <div class="detail-actions">
+                        ${auth.isAuthenticated() ? `
+                            <button onclick="toggleGroupSubscription()" class="btn btn-primary">
+                                Subscribe
+                            </button>
+                            <button onclick="showCreateEventModal()" class="btn btn-primary" id="createEventBtn">
+                                Create Event
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+
+                ${upcomingEvents.length > 0 ? `
+                    <div class="section">
+                        <div class="section-header">
+                            <h2>Upcoming Events (${upcomingEvents.length})</h2>
+                        </div>
+                        <div class="events-grid">
+                            ${upcomingEvents.map(event => renderEventCard(event)).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${pastEvents.length > 0 ? `
+                    <div class="section">
+                        <div class="section-header">
+                            <h2>Past Events (${pastEvents.length})</h2>
+                        </div>
+                        <div class="events-grid">
+                            ${pastEvents.map(event => renderEventCard(event)).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${events.length === 0 ? '<div class="empty-state">No events yet</div>' : ''}
+            `;
+
+            document.getElementById('groupContent').innerHTML = content;
+        }
+
+        function renderEventCard(event) {
+            const startDate = new Date(event.start_time);
+            const isPast = startDate < new Date();
+
+            return `
+                <div class="event-card ${isPast ? 'past-event' : ''}" onclick="window.location.href='/event.html?id=${event.id}'">
+                    <div class="event-date">
+                        <div class="event-month">${startDate.toLocaleDateString('en-US', { month: 'short' })}</div>
+                        <div class="event-day">${startDate.getDate()}</div>
+                    </div>
+                    <div class="event-details">
+                        <h3>${escapeHtml(event.title)}</h3>
+                        <div class="event-meta">
+                            <span>📅 ${startDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+                            <span>🕐 ${startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+                            ${event.capacity ? `<span>👥 ${event.rsvp_count || 0}/${event.capacity}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showCreateEventModal() {
+            if (!auth.isAuthenticated()) {
+                window.location.href = '/login.html';
+                return;
+            }
+            document.getElementById('eventModal').style.display = 'block';
+        }
+
+        function closeEventModal() {
+            document.getElementById('eventModal').style.display = 'none';
+        }
+
+        async function saveEvent(event) {
+            event.preventDefault();
+
+            const eventData = {
+                group_id: groupId,
+                title: document.getElementById('eventTitle').value,
+                slug: document.getElementById('eventSlug').value,
+                description: document.getElementById('eventDescription').value || null,
+                start_time: new Date(document.getElementById('eventStartTime').value).toISOString(),
+                end_time: new Date(document.getElementById('eventEndTime').value).toISOString(),
+                timezone: document.getElementById('eventTimezone').value,
+                venue_id: document.getElementById('eventVenue').value,
+                event_type: document.getElementById('eventType').value,
+                capacity: document.getElementById('eventCapacity').value ? parseInt(document.getElementById('eventCapacity').value) : null
+            };
+
+            try {
+                await api.createEvent(eventData);
+                showToast('Event created successfully');
+                closeEventModal();
+                loadGroup();
+            } catch (error) {
+                console.error('Error creating event:', error);
+                showToast(error.message || 'Failed to create event', 'error');
+            }
+        }
+
+        async function toggleGroupSubscription() {
+            if (!auth.isAuthenticated()) {
+                window.location.href = '/login.html';
+                return;
+            }
+            try {
+                await api.subscribeToGroup(groupId, {
+                    email: true,
+                    sms: false,
+                    discord: false
+                });
+                showToast('Subscribed to group');
+            } catch (error) {
+                console.error('Error subscribing:', error);
+                showToast(error.message || 'Failed to subscribe', 'error');
+            }
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('eventModal');
+            if (event.target === modal) {
+                closeEventModal();
+            }
+        }
+    </script>
+</body>
+</html>

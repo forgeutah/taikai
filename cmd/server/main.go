@@ -109,17 +109,40 @@ func main() {
 	webFileServer := http.FileServer(http.Dir(webDir))
 	r.Handle("/css/*", webFileServer)
 	r.Handle("/js/*", webFileServer)
+
+	// HTML pages
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, webDir+"/index.html")
+	})
 	r.Get("/index.html", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, webDir+"/index.html")
+	})
+	r.Get("/organizations.html", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, webDir+"/organizations.html")
+	})
+	r.Get("/organization.html", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, webDir+"/organization.html")
+	})
+	r.Get("/group.html", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, webDir+"/group.html")
+	})
+	r.Get("/events.html", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, webDir+"/events.html")
 	})
 	r.Get("/event.html", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, webDir+"/event.html")
 	})
+	r.Get("/venues.html", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, webDir+"/venues.html")
+	})
+	r.Get("/login.html", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, webDir+"/login.html")
+	})
+	r.Get("/profile.html", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, webDir+"/profile.html")
+	})
 	r.Get("/admin.html", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, webDir+"/admin.html")
-	})
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, webDir+"/index.html")
 	})
 
 	// Health check

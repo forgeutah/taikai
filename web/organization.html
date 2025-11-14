@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organization - Taikai</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <a href="/">Taikai</a>
+            </div>
+            <div class="navbar-menu">
+                <a href="/organizations.html">Organizations</a>
+                <a href="/events.html">Events</a>
+                <a href="/venues.html">Venues</a>
+                <div id="authButtons">
+                    <a href="/profile.html" class="btn btn-sm" id="profileBtn" style="display:none;">Profile</a>
+                    <button onclick="auth.logout()" class="btn btn-sm btn-secondary" id="logoutBtn" style="display:none;">Logout</button>
+                    <a href="/login.html" class="btn btn-sm btn-primary" id="loginBtn">Login</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container main-content">
+        <div id="organizationContent">
+            <div class="loading">Loading organization...</div>
+        </div>
+    </main>
+
+    <!-- Create Group Modal -->
+    <div id="groupModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create Group</h2>
+                <span class="close" onclick="closeGroupModal()">&times;</span>
+            </div>
+            <form id="groupForm" onsubmit="saveGroup(event)">
+                <div class="form-group">
+                    <label for="groupName">Group Name *</label>
+                    <input type="text" id="groupName" required>
+                </div>
+                <div class="form-group">
+                    <label for="groupSlug">URL Slug *</label>
+                    <input type="text" id="groupSlug" required placeholder="e.g., kubernetes-meetup">
+                </div>
+                <div class="form-group">
+                    <label for="groupDescription">Description</label>
+                    <textarea id="groupDescription" rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="groupCommunityChat">Community Chat URL (optional)</label>
+                    <input type="url" id="groupCommunityChat" placeholder="https://...">
+                    <small class="text-muted">Leave empty to inherit from organization</small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" onclick="closeGroupModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Group</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/app.js"></script>
+    <script>
+        let organization = null;
+        let groups = [];
+        const orgId = new URLSearchParams(window.location.search).get('id');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            auth.updateUI();
+            if (!orgId) {
+                window.location.href = '/organizations.html';
+                return;
+            }
+            loadOrganization();
+        });
+
+        async function loadOrganization() {
+            try {
+                organization = await api.getOrganization(orgId);
+                groups = await api.getGroups({ organization_id: orgId });
+                displayOrganization();
+            } catch (error) {
+                console.error('Error loading organization:', error);
+                document.getElementById('organizationContent').innerHTML =
+                    '<div class="error">Failed to load organization</div>';
+            }
+        }
+
+        function displayOrganization() {
+            const isSubscribed = false; // TODO: Check subscription status
+
+            const content = `
+                <div class="detail-header">
+                    <div>
+                        <div class="breadcrumb">
+                            <a href="/organizations.html">Organizations</a> / ${escapeHtml(organization.name)}
+                        </div>
+                        <h1>${escapeHtml(organization.name)}</h1>
+                        ${organization.description ? `<p class="lead">${escapeHtml(organization.description)}</p>` : ''}
+                        <div class="detail-meta">
+                            ${organization.website ? `<a href="${escapeHtml(organization.website)}" target="_blank" class="meta-link">🌐 Website</a>` : ''}
+                            ${organization.community_chat_url ? `<a href="${escapeHtml(organization.community_chat_url)}" target="_blank" class="meta-link">💬 Community Chat</a>` : ''}
+                        </div>
+                    </div>
+                    <div class="detail-actions">
+                        ${auth.isAuthenticated() ? `
+                            <button onclick="toggleOrgSubscription()" class="btn ${isSubscribed ? 'btn-secondary' : 'btn-primary'}">
+                                ${isSubscribed ? '✓ Subscribed' : 'Subscribe'}
+                            </button>
+                        ` : ''}
+                        <button onclick="showCreateGroupModal()" class="btn btn-primary" id="createGroupBtn" style="display:none;">
+                            Create Group
+                        </button>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <h2>Groups (${groups.length})</h2>
+                    </div>
+                    ${groups.length > 0 ? `
+                        <div class="groups-grid">
+                            ${groups.map(group => `
+                                <div class="group-card" onclick="window.location.href='/group.html?id=${group.id}'">
+                                    <h3>${escapeHtml(group.name)}</h3>
+                                    ${group.description ? `<p>${escapeHtml(group.description)}</p>` : ''}
+                                    <div class="group-card-footer">
+                                        <span class="badge">${group.event_count || 0} events</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <div class="empty-state">No groups yet</div>
+                    `}
+                </div>
+            `;
+
+            document.getElementById('organizationContent').innerHTML = content;
+
+            // Show create button for org admins (would need permission check)
+            if (auth.isAuthenticated()) {
+                const btn = document.getElementById('createGroupBtn');
+                if (btn) btn.style.display = 'block';
+            }
+        }
+
+        function showCreateGroupModal() {
+            if (!auth.isAuthenticated()) {
+                window.location.href = '/login.html';
+                return;
+            }
+            document.getElementById('groupModal').style.display = 'block';
+        }
+
+        function closeGroupModal() {
+            document.getElementById('groupModal').style.display = 'none';
+        }
+
+        async function saveGroup(event) {
+            event.preventDefault();
+
+            const groupData = {
+                organization_id: orgId,
+                name: document.getElementById('groupName').value,
+                slug: document.getElementById('groupSlug').value,
+                description: document.getElementById('groupDescription').value || null,
+                community_chat_url: document.getElementById('groupCommunityChat').value || null
+            };
+
+            try {
+                await api.createGroup(groupData);
+                showToast('Group created successfully');
+                closeGroupModal();
+                loadOrganization();
+            } catch (error) {
+                console.error('Error creating group:', error);
+                showToast(error.message || 'Failed to create group', 'error');
+            }
+        }
+
+        async function toggleOrgSubscription() {
+            if (!auth.isAuthenticated()) {
+                window.location.href = '/login.html';
+                return;
+            }
+            try {
+                // TODO: Implement subscription toggle
+                await api.subscribeToOrganization(orgId, {
+                    email: true,
+                    sms: false,
+                    discord: false
+                });
+                showToast('Subscribed to organization');
+                loadOrganization();
+            } catch (error) {
+                console.error('Error toggling subscription:', error);
+                showToast(error.message || 'Failed to update subscription', 'error');
+            }
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('groupModal');
+            if (event.target === modal) {
+                closeGroupModal();
+            }
+        }
+    </script>
+</body>
+</html>

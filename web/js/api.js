@@ -49,15 +49,11 @@ const api = {
         return data;
     },
 
-    async register(email, password, name) {
+    async register(userData) {
         const data = await this.request('/auth/register', {
             method: 'POST',
-            body: JSON.stringify({ email, password, name })
+            body: JSON.stringify(userData)
         });
-        if (data.token) {
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
-        }
         return data;
     },
 
@@ -66,8 +62,21 @@ const api = {
             await this.request('/auth/logout', { method: 'POST' });
         } finally {
             localStorage.removeItem('token');
+            localStorage.removeItem('refresh_token');
             localStorage.removeItem('user');
         }
+    },
+
+    // User
+    async getMe() {
+        return this.request('/users/me');
+    },
+
+    async updateMe(data) {
+        return this.request('/users/me', {
+            method: 'PATCH',
+            body: JSON.stringify(data)
+        });
     },
 
     // Organizations
@@ -79,6 +88,20 @@ const api = {
         return this.request(`/organizations/${id}`);
     },
 
+    async createOrganization(data) {
+        return this.request('/organizations', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+    },
+
+    async updateOrganization(id, data) {
+        return this.request(`/organizations/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data)
+        });
+    },
+
     // Groups
     async getGroups(params = {}) {
         const query = new URLSearchParams(params).toString();
@@ -87,6 +110,43 @@ const api = {
 
     async getGroup(id) {
         return this.request(`/groups/${id}`);
+    },
+
+    async createGroup(data) {
+        return this.request('/groups', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+    },
+
+    async updateGroup(id, data) {
+        return this.request(`/groups/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data)
+        });
+    },
+
+    // Venues
+    async getVenues() {
+        return this.request('/venues');
+    },
+
+    async getVenue(id) {
+        return this.request(`/venues/${id}`);
+    },
+
+    async createVenue(data) {
+        return this.request('/venues', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+    },
+
+    async updateVenue(id, data) {
+        return this.request(`/venues/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data)
+        });
     },
 
     // Events

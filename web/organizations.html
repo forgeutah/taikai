@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organizations - Taikai</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <a href="/">Taikai</a>
+            </div>
+            <div class="navbar-menu">
+                <a href="/organizations.html">Organizations</a>
+                <a href="/events.html">Events</a>
+                <a href="/venues.html">Venues</a>
+                <div id="authButtons">
+                    <a href="/profile.html" class="btn btn-sm" id="profileBtn" style="display:none;">Profile</a>
+                    <button onclick="auth.logout()" class="btn btn-sm btn-secondary" id="logoutBtn" style="display:none;">Logout</button>
+                    <a href="/login.html" class="btn btn-sm btn-primary" id="loginBtn">Login</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container main-content">
+        <div class="page-header">
+            <div>
+                <h1>Organizations</h1>
+                <p class="text-muted">Discover technology communities and organizations</p>
+            </div>
+            <button onclick="showCreateOrgModal()" class="btn btn-primary" id="createOrgBtn" style="display:none;">
+                Create Organization
+            </button>
+        </div>
+
+        <div class="search-filters">
+            <input type="text" id="searchInput" placeholder="Search organizations..." class="search-input">
+        </div>
+
+        <div id="organizationsGrid" class="orgs-grid">
+            <div class="loading">Loading organizations...</div>
+        </div>
+    </main>
+
+    <!-- Create/Edit Organization Modal -->
+    <div id="orgModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="orgModalTitle">Create Organization</h2>
+                <span class="close" onclick="closeOrgModal()">&times;</span>
+            </div>
+            <form id="orgForm" onsubmit="saveOrganization(event)">
+                <div class="form-group">
+                    <label for="orgName">Organization Name *</label>
+                    <input type="text" id="orgName" required>
+                </div>
+                <div class="form-group">
+                    <label for="orgSlug">URL Slug *</label>
+                    <input type="text" id="orgSlug" required placeholder="e.g., forge-utah">
+                    <small class="text-muted">Lowercase letters, numbers, and hyphens only</small>
+                </div>
+                <div class="form-group">
+                    <label for="orgDescription">Description</label>
+                    <textarea id="orgDescription" rows="4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="orgWebsite">Website</label>
+                    <input type="url" id="orgWebsite" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label for="orgCommunityChat">Community Chat URL</label>
+                    <input type="url" id="orgCommunityChat" placeholder="https://discord.gg/...">
+                    <small class="text-muted">Discord, Slack, or other community chat platform</small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" onclick="closeOrgModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/app.js"></script>
+    <script>
+        let currentOrgId = null;
+        let allOrganizations = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            auth.updateUI();
+            loadOrganizations();
+
+            // Show create button if user is logged in
+            if (auth.isAuthenticated()) {
+                document.getElementById('createOrgBtn').style.display = 'block';
+            }
+
+            // Search functionality
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const filtered = allOrganizations.filter(org =>
+                    org.name.toLowerCase().includes(query) ||
+                    (org.description && org.description.toLowerCase().includes(query))
+                );
+                displayOrganizations(filtered);
+            });
+        });
+
+        async function loadOrganizations() {
+            try {
+                allOrganizations = await api.getOrganizations();
+                displayOrganizations(allOrganizations);
+            } catch (error) {
+                console.error('Error loading organizations:', error);
+                document.getElementById('organizationsGrid').innerHTML =
+                    '<div class="error">Failed to load organizations. Please try again.</div>';
+            }
+        }
+
+        function displayOrganizations(organizations) {
+            const container = document.getElementById('organizationsGrid');
+
+            if (organizations.length === 0) {
+                container.innerHTML = '<div class="empty-state">No organizations found</div>';
+                return;
+            }
+
+            container.innerHTML = organizations.map(org => `
+                <div class="org-card" onclick="window.location.href='/organization.html?id=${org.id}'">
+                    <div class="org-card-header">
+                        <h3>${escapeHtml(org.name)}</h3>
+                        ${org.website ? `<a href="${escapeHtml(org.website)}" target="_blank" onclick="event.stopPropagation()" class="org-link">🌐</a>` : ''}
+                    </div>
+                    ${org.description ? `<p class="org-description">${escapeHtml(org.description)}</p>` : ''}
+                    <div class="org-card-footer">
+                        <span class="org-meta">
+                            <span class="badge">${org.group_count || 0} groups</span>
+                            ${org.community_chat_url ? `<a href="${escapeHtml(org.community_chat_url)}" target="_blank" onclick="event.stopPropagation()" class="community-link">💬 Chat</a>` : ''}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showCreateOrgModal() {
+            if (!auth.isAuthenticated()) {
+                window.location.href = '/login.html';
+                return;
+            }
+            currentOrgId = null;
+            document.getElementById('orgModalTitle').textContent = 'Create Organization';
+            document.getElementById('orgForm').reset();
+            document.getElementById('orgModal').style.display = 'block';
+        }
+
+        function closeOrgModal() {
+            document.getElementById('orgModal').style.display = 'none';
+        }
+
+        async function saveOrganization(event) {
+            event.preventDefault();
+
+            const orgData = {
+                name: document.getElementById('orgName').value,
+                slug: document.getElementById('orgSlug').value,
+                description: document.getElementById('orgDescription').value || null,
+                website: document.getElementById('orgWebsite').value || null,
+                community_chat_url: document.getElementById('orgCommunityChat').value || null
+            };
+
+            try {
+                if (currentOrgId) {
+                    await api.updateOrganization(currentOrgId, orgData);
+                    showToast('Organization updated successfully');
+                } else {
+                    await api.createOrganization(orgData);
+                    showToast('Organization created successfully');
+                }
+                closeOrgModal();
+                loadOrganizations();
+            } catch (error) {
+                console.error('Error saving organization:', error);
+                showToast(error.message || 'Failed to save organization', 'error');
+            }
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('orgModal');
+            if (event.target === modal) {
+                closeOrgModal();
+            }
+        }
+    </script>
+</body>
+</html>
