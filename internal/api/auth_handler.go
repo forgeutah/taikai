@@ -20,12 +20,12 @@ type AuthHandler struct {
 	db           *sql.DB
 	jwtManager   *jwt.Manager
 	emailService *email.Service
-	blacklist    *auth.RedisBlacklist
+	blacklist    auth.TokenBlacklist
 	baseURL      string
 }
 
 // NewAuthHandler creates a new authentication handler
-func NewAuthHandler(db *sql.DB, jwtManager *jwt.Manager, emailService *email.Service, blacklist *auth.RedisBlacklist) *AuthHandler {
+func NewAuthHandler(db *sql.DB, jwtManager *jwt.Manager, emailService *email.Service, blacklist auth.TokenBlacklist) *AuthHandler {
 	return &AuthHandler{
 		db:           db,
 		jwtManager:   jwtManager,

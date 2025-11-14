@@ -20,10 +20,8 @@ Taikai is an open-source event management platform designed for technology commu
 ### Backend
 - **Language**: Go 1.21+
 - **Framework**: Chi (HTTP router)
-- **Database**: PostgreSQL 15+
-- **Cache**: Redis 7+
-- **Background Jobs**: Asynq (Redis-backed)
-- **Migrations**: Goose
+- **Database**: PostgreSQL 17+
+- **Migrations**: Goose (embedded, auto-run on startup)
 
 ### Frontend
 - **Rendering**: Server-side with Go templates
@@ -37,10 +35,9 @@ Taikai is an open-source event management platform designed for technology commu
 ## Prerequisites
 
 - Go 1.21 or higher
-- Docker and Docker Compose
+- Docker or Podman
 - Make (optional, but recommended)
-- PostgreSQL 15+ (via Docker)
-- Redis 7+ (via Docker)
+- PostgreSQL 17+ (via Docker)
 
 ## Quick Start
 
@@ -78,7 +75,6 @@ make docker-up
 
 This starts:
 - PostgreSQL on port 5432
-- Redis on port 6379
 - Mailpit (email testing) on ports 1025 (SMTP) and 8025 (Web UI)
 
 ### 5. Run Database Migrations
@@ -227,7 +223,6 @@ All configuration is done via environment variables. See `.env.example` for all 
 ### Key Environment Variables
 
 - `DATABASE_URL`: PostgreSQL connection string
-- `REDIS_URL`: Redis connection string
 - `JWT_SECRET`: Secret key for JWT token signing (change in production!)
 - `SMTP_HOST`, `SMTP_PORT`: Email server configuration
 - `APP_PORT`: HTTP server port (default: 8080)

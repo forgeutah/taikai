@@ -31,23 +31,37 @@ install-tools: ## Install development tools
 	go install github.com/pressly/goose/v3/cmd/goose@latest
 	go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
 
-docker-up: ## Start Docker containers (PostgreSQL, Redis, Mailpit)
+docker-up: ## Start Docker containers (PostgreSQL, Mailpit)
 	@echo "Starting Docker containers..."
-	docker-compose up -d
+	@docker run -d --name taikai-postgres \
+		-e POSTGRES_DB=taikai \
+		-e POSTGRES_USER=taikai \
+		-e POSTGRES_PASSWORD=taikai_dev_password \
+		-p 5432:5432 \
+		-v taikai-postgres-data:/var/lib/postgresql/data \
+		postgres:17-alpine 2>/dev/null || echo "PostgreSQL container already running"
+	@docker run -d --name taikai-mailpit \
+		-p 1025:1025 \
+		-p 8025:8025 \
+		-e MP_SMTP_AUTH_ACCEPT_ANY=1 \
+		-e MP_SMTP_AUTH_ALLOW_INSECURE=1 \
+		axllent/mailpit:latest 2>/dev/null || echo "Mailpit container already running"
 	@echo "Waiting for PostgreSQL to be ready..."
 	@sleep 3
 	@echo "Docker containers started!"
 	@echo "PostgreSQL: localhost:5432"
-	@echo "Redis: localhost:6379"
 	@echo "Mailpit Web UI: http://localhost:8025"
 
 docker-down: ## Stop Docker containers
 	@echo "Stopping Docker containers..."
-	docker-compose down
+	@docker stop taikai-postgres taikai-mailpit 2>/dev/null || true
+	@docker rm taikai-postgres taikai-mailpit 2>/dev/null || true
 
 docker-clean: ## Stop containers and remove volumes
 	@echo "Cleaning Docker containers and volumes..."
-	docker-compose down -v
+	@docker stop taikai-postgres taikai-mailpit 2>/dev/null || true
+	@docker rm taikai-postgres taikai-mailpit 2>/dev/null || true
+	@docker volume rm taikai-postgres-data 2>/dev/null || true
 
 migrate-up: ## Run database migrations
 	@echo "Running database migrations..."

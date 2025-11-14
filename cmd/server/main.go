@@ -15,8 +15,9 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
-	"github.com/redis/go-redis/v9"
+	"github.com/pressly/goose/v3"
 
+	"github.com/forgeutah/taikai"
 	"github.com/forgeutah/taikai/internal/api"
 	"github.com/forgeutah/taikai/internal/auth"
 	"github.com/forgeutah/taikai/internal/middleware"
@@ -37,14 +38,15 @@ func main() {
 	}
 	defer db.Close()
 
-	// Initialize Redis
-	redisClient := initRedis()
-	defer redisClient.Close()
+	// Run migrations
+	if err := runMigrations(db); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
 
 	// Initialize services
 	jwtManager := initJWTManager()
 	emailService := initEmailService()
-	blacklist := auth.NewRedisBlacklist(redisClient)
+	blacklist := auth.NewPostgresBlacklist(db)
 	permissionChecker := auth.NewPermissionChecker(db)
 
 	// Initialize handlers
@@ -255,7 +257,6 @@ func main() {
 	log.Printf("🚀 Taikai server starting on port %s", port)
 	log.Printf("📧 Email service configured for: %s", os.Getenv("SMTP_HOST"))
 	log.Printf("🗄️  Database: Connected")
-	log.Printf("🔴 Redis: Connected")
 
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("Server failed: %v", err)
@@ -289,31 +290,6 @@ func initDatabase() (*sql.DB, error) {
 	}
 
 	return db, nil
-}
-
-func initRedis() *redis.Client {
-	redisURL := os.Getenv("REDIS_URL")
-	if redisURL == "" {
-		redisURL = "redis://localhost:6379"
-	}
-
-	opt, err := redis.ParseURL(redisURL)
-	if err != nil {
-		log.Fatalf("Failed to parse Redis URL: %v", err)
-	}
-
-	client := redis.NewClient(opt)
-
-	// Test connection
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := client.Ping(ctx).Err(); err != nil {
-		log.Printf("Warning: Redis connection failed: %v", err)
-		log.Println("Token blacklist will not function properly")
-	}
-
-	return client
 }
 
 func initJWTManager() *jwt.Manager {
@@ -354,4 +330,19 @@ func initEmailService() *email.Service {
 	}
 
 	return email.NewService(config)
+}
+
+func runMigrations(db *sql.DB) error {
+	goose.SetBaseFS(taikai.Migrations)
+
+	if err := goose.SetDialect("postgres"); err != nil {
+		return fmt.Errorf("failed to set goose dialect: %w", err)
+	}
+
+	if err := goose.Up(db, "migrations"); err != nil {
+		return fmt.Errorf("failed to run migrations: %w", err)
+	}
+
+	log.Println("✅ Database migrations completed successfully")
+	return nil
 }
