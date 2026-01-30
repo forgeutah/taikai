@@ -3,57 +3,50 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - 'main.go'
-      - 'cmd/**'
-      - 'internal/**'
-      - Dockerfile
-      - 'go.mod'
-      - 'go.sum'
 
 permissions:
   contents: read
   pull-requests: read
+# Optional: allow write access to checks to allow the action to annotate code in the PR.
+  checks: write
 
 jobs:
-  conventional-commits-pr:
-    if: github.event.pull_request.draft == false
-    name: Validate Conventional Commits PR
+
+  golint:
     runs-on: ubuntu-latest
     steps:
-      - uses: crazy-max/ghaction-dump-context@v1
-      - uses: catalystsquad/action-validate-conventional-commits-pr@v1
-  ensure-compile:
-    if: github.event.pull_request.draft == false
-    name: Ensure project compiles
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.22
+
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v6
+      with:
+        version: v1.59
+
+  buflint:
     runs-on: ubuntu-latest
     steps:
-      - uses: crazy-max/ghaction-dump-context@v1
-      - name: Auth Github
-        run: |
-          git config --global url."https://${{ secrets.AUTOMATION_PAT }}@github.com".insteadOf "https://github.com"
-      - name: Compile
-        uses: catalystsquad/action-compile-go@v1
-        with: 
-          go-version: ~1.21
+      - uses: actions/checkout@v4
+      - uses: bufbuild/buf-setup-action@v1
+      - uses: bufbuild/buf-lint-action@v1
 
   test:
-    needs:
-      - ensure-compile
-    name: Test
-    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
-    env:
-      GIT_PAT: ${{ secrets.AUTOMATION_PAT }}
     steps:
-      - name: Dump Context
-        uses: crazy-max/ghaction-dump-context@v1
-      - name: Run Tests
-        uses: catalystsquad/action-kind-test@v1
-        with:
-          token: ${{ secrets.AUTOMATION_PAT }}
-          wait-for-ports: 8080
-          add-private-helm-repo: "true"
-          helm-repo-username: ${{ secrets.AUTOMATION_PAT }}
-          helm-repo-password: ${{ secrets.AUTOMATION_PAT }}
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.22
+
+    - name: Build
+      run: go build -a -v server/main.go
+
+    - name: Test
+      run: go test -v -cover ./...
 
